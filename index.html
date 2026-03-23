@@ -53,7 +53,7 @@
         <!-- View 2: Citizen -->
         <div class="login-card" id="viewCitizen" style="display:none;">
             <button class="btn btn-outline btn-sm" onclick="showAuthView('selection')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-            <div class="login-logo"><i class="fa-solid fa-users"></i> Citizen Portal</div>
+            <div class="login-logo"><i class="fa-solid fa-users"></i> Citizen Login</div>
             <form style="text-align: left;">
                 <div class="form-group">
                     <label>Email Address</label>
@@ -63,9 +63,31 @@
                     <label>Password</label>
                     <input type="password" id="citPassword" required placeholder="••••••••">
                 </div>
-                <button type="button" class="btn btn-primary btn-block" onclick="loginCitizen()" style="margin-bottom:0.5rem;"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
-                <button type="button" class="btn btn-outline btn-block" onclick="registerCitizen()"><i class="fa-solid fa-user-plus"></i> Register New Account</button>
-                <div id="citError" style="color:red; font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
+                <button type="button" class="btn btn-primary btn-block" onclick="loginCitizen()" style="margin-bottom:1rem;"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+                <div style="text-align:center; padding-top:1rem; border-top:1px solid var(--border-light);">
+                    <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:0.5rem;">New to FixMyArea?</p>
+                    <button type="button" class="btn btn-outline btn-block" onclick="showAuthView('register')"><i class="fa-solid fa-user-plus"></i> Create an Account</button>
+                </div>
+                <div id="citError" style="color:var(--status-pending); font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
+            </form>
+        </div>
+
+        <!-- View 4: Citizen Register -->
+        <div class="login-card" id="viewRegister" style="display:none;">
+            <button class="btn btn-outline btn-sm" onclick="showAuthView('citizen')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back to Login</button>
+            <div class="login-logo"><i class="fa-solid fa-user-plus"></i> Register</div>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem;">Join the movement today.</p>
+            <form style="text-align: left;">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="regEmail" required placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Create Password</label>
+                    <input type="password" id="regPassword" required placeholder="At least 6 characters">
+                </div>
+                <button type="button" class="btn btn-primary btn-block" onclick="registerCitizen()"><i class="fa-solid fa-check"></i> Register Now</button>
+                <div id="regError" style="color:var(--status-pending); font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
             </form>
         </div>
 

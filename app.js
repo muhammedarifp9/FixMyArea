@@ -128,17 +128,20 @@ function showAuthView(viewName) {
     document.getElementById("viewSelection").style.display = "none";
     document.getElementById("viewCitizen").style.display = "none";
     document.getElementById("viewAdmin").style.display = "none";
+    const vReg = document.getElementById("viewRegister");
+    if(vReg) vReg.style.display = "none";
     
     if(viewName === 'citizen') document.getElementById("viewCitizen").style.display = "block";
     else if(viewName === 'admin') document.getElementById("viewAdmin").style.display = "block";
+    else if(viewName === 'register') { if(vReg) vReg.style.display = "block"; }
     else document.getElementById("viewSelection").style.display = "block";
 }
 
 async function registerCitizen() {
-    const errorDiv = document.getElementById("citError");
+    const errorDiv = document.getElementById("regError");
     errorDiv.style.display = "none";
-    const email = document.getElementById("citEmail").value.trim();
-    const password = document.getElementById("citPassword").value;
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
     if (!email || !password) {
         errorDiv.innerText = "Please fill in both your email and password.";
         errorDiv.style.display = "block"; return;
