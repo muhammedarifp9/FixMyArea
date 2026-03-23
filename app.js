@@ -137,13 +137,16 @@ function showAuthView(viewName) {
 async function registerCitizen() {
     const errorDiv = document.getElementById("citError");
     errorDiv.style.display = "none";
+    const email = document.getElementById("citEmail").value.trim();
+    const password = document.getElementById("citPassword").value;
+    if (!email || !password) {
+        errorDiv.innerText = "Please fill in both your email and password.";
+        errorDiv.style.display = "block"; return;
+    }
     try {
-        const { user } = await auth.createUserWithEmailAndPassword(
-            document.getElementById("citEmail").value.trim(), 
-            document.getElementById("citPassword").value
-        );
+        const { user } = await auth.createUserWithEmailAndPassword(email, password);
         const role = (user.email.includes("admin")) ? "admin" : "citizen";
-        try { await db.collection("users").doc(user.uid).set({ role }); } catch(err) {} // Ignore DB errors so login still works
+        try { await db.collection("users").doc(user.uid).set({ role }); } catch(err) {} 
     } catch (err) {
         errorDiv.innerText = err.message;
         errorDiv.style.display = "block";
@@ -153,11 +156,14 @@ async function registerCitizen() {
 async function loginCitizen() {
     const errorDiv = document.getElementById("citError");
     errorDiv.style.display = "none";
+    const email = document.getElementById("citEmail").value.trim();
+    const password = document.getElementById("citPassword").value;
+    if (!email || !password) {
+        errorDiv.innerText = "Please fill in both your email and password.";
+        errorDiv.style.display = "block"; return;
+    }
     try {
-        await auth.signInWithEmailAndPassword(
-            document.getElementById("citEmail").value.trim(), 
-            document.getElementById("citPassword").value
-        );
+        await auth.signInWithEmailAndPassword(email, password);
     } catch (err) {
         errorDiv.innerText = err.message;
         errorDiv.style.display = "block";
@@ -167,12 +173,14 @@ async function loginCitizen() {
 async function loginAdmin() {
     const errorDiv = document.getElementById("admError");
     errorDiv.style.display = "none";
+    const email = document.getElementById("admEmail").value.trim();
+    const password = document.getElementById("admPassword").value;
+    if (!email || !password) {
+        errorDiv.innerText = "Please enter official credentials.";
+        errorDiv.style.display = "block"; return;
+    }
     try {
-        await auth.signInWithEmailAndPassword(
-            document.getElementById("admEmail").value.trim(), 
-            document.getElementById("admPassword").value
-        );
-        // We will trust the onAuthStateChanged to verify they are actually an admin.
+        await auth.signInWithEmailAndPassword(email, password);
     } catch (err) {
         errorDiv.innerText = err.message;
         errorDiv.style.display = "block";
