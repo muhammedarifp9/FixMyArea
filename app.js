@@ -14,10 +14,19 @@ const firebaseConfig = {
 // Initialize Firebase
 let app, auth, db, storage;
 if (firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
-    app = firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    storage = firebase.storage();
+    try {
+        app = firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        // Check if storage is available (since some pages might miss the SDK)
+        if (typeof firebase.storage === 'function') {
+            storage = firebase.storage();
+        } else {
+            console.warn("Firebase Storage SDK not loaded. Storage features will be unavailable.");
+        }
+    } catch (err) {
+        console.error("Firebase Initialization Error:", err);
+    }
 }
 
 /*************************************************
@@ -158,6 +167,15 @@ function applyLanguage(lang) {
             }
         }
     });
+    // Handle attributes like title and aria-label
+    document.querySelectorAll("[data-i18n-title]").forEach(el => {
+        const key = el.getAttribute("data-i18n-title");
+        if (t[key]) el.title = t[key];
+    });
+    document.querySelectorAll("[data-i18n-label]").forEach(el => {
+        const key = el.getAttribute("data-i18n-label");
+        if (t[key]) el.setAttribute("aria-label", t[key]);
+    });
 }
 
 function applyTheme(theme) {
@@ -166,6 +184,11 @@ function applyTheme(theme) {
     } else {
         document.documentElement.removeAttribute('data-theme');
     }
+}
+
+// Bridge for settings.html
+function applyThemePreference(theme) {
+    applyTheme(theme);
 }
 
 function timeAgo(dateString) {
@@ -195,17 +218,21 @@ function getPriority(votes) {
  * 3. INITIALIZATION & LISTENERS
  *************************************************/
 document.addEventListener("DOMContentLoaded", () => {
-    if (!app) return;
-
-    setupEventListeners();
-
-    // Init Theme and Language
+    // 1. Initialize UI Preferences Immediately (Independent of Firebase)
     const currentTheme = localStorage.getItem("fixmyarea_theme") || "light";
     const currentLang = localStorage.getItem("fixmyarea_lang") || "en";
     applyTheme(currentTheme);
     applyLanguage(currentLang);
 
-    // Firebase Auth Listener
+    if (!app) {
+        console.warn("App core not initialized. Some features may be limited.");
+        return;
+    }
+
+    // 2. Setup Events
+    setupEventListeners();
+
+    // 3. Firebase Auth Listener
     auth.onAuthStateChanged(async user => {
         if (user) {
             try {
@@ -240,6 +267,21 @@ function setupEventListeners() {
         if(!currentUserUID) window.location.href = 'login.html';
         else showModal("reportModal");
     });
+
+    // Special handling for report.html guest view
+    if(window.location.pathname.includes('report.html')) {
+        const guestView = document.getElementById("guestReportView");
+        const userView = document.getElementById("reportForm");
+        if(guestView && userView) {
+            if(currentUserUID) {
+                guestView.style.display = "none";
+                userView.style.display = "block";
+            } else {
+                guestView.style.display = "block";
+                userView.style.display = "none";
+            }
+        }
+    }
     
     document.querySelectorAll(".close").forEach(btn => {
         btn.addEventListener("click", (e) => hideModal(e.target.closest(".modal").id));
@@ -299,7 +341,17 @@ function handleSuccessfulLogin(user, role, name) {
     currentUserUID = user.uid;
     currentRole = role;
 
-    // Update UI elements
+    // Sync with common.js
+    localStorage.setItem('fixmyarea_user', JSON.stringify({ uid: user.uid, role, name }));
+    if (typeof initNavigation === "function") initNavigation();
+
+    // Update UI elements for report.html
+    const guestView = document.getElementById("guestReportView");
+    const userView = document.getElementById("reportForm");
+    if(guestView && userView) {
+        guestView.style.display = "none";
+        userView.style.display = "block";
+    }
     const loginOverlay = document.getElementById("loginOverlay");
     if(loginOverlay) loginOverlay.style.display = "none";
     
@@ -335,6 +387,10 @@ function handleLogoutUI() {
     currentUserUID = null;
     currentRole = null;
     
+    // Sync with common.js
+    localStorage.removeItem('fixmyarea_user');
+    if (typeof initNavigation === "function") initNavigation();
+
     // Some pages might require redirect if not logged in
     const restrictedPages = ['profile.html', 'settings.html', 'report.html'];
     const currentPage = window.location.pathname.split('/').pop();
@@ -355,6 +411,14 @@ function handleLogoutUI() {
 
     if (!mapInitialized) initMap();
     listenToIssues(); // Guest mode
+
+    // Update UI elements for report.html guest view
+    const guestView = document.getElementById("guestReportView");
+    const userView = document.getElementById("reportForm");
+    if(guestView && userView) {
+        guestView.style.display = "block";
+        userView.style.display = "none";
+    }
 }
 
 function logout() {
@@ -397,41 +461,67 @@ function upvoteIssue(id, event) {
 async function handleReportSubmit(e) {
     e.preventDefault();
     const submitBtn = document.getElementById("btnReportSubmit");
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+    const originalBtnHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading Files...';
     submitBtn.disabled = true;
 
     try {
-        const file = document.getElementById("issueFile").files[0];
+        const issueFile = document.getElementById("issueFile").files[0];
+        const proofFile = document.getElementById("proofFile").files[0];
         const category = document.getElementById("issueCategory").value;
-        const location = document.getElementById("issueLocation").value;
+        const street1 = document.getElementById("loc_street1").value;
+        const street2 = document.getElementById("loc_street2").value;
+        const city = document.getElementById("loc_city").value;
+        const state = document.getElementById("loc_state").value;
+        const zip = document.getElementById("loc_zip").value;
+        const country = document.getElementById("loc_country").value;
+        const addrTypeInput = document.querySelector('input[name="addr_type"]:checked');
+        const addrType = addrTypeInput ? addrTypeInput.value : "new";
         const description = document.getElementById("issueDescription").value;
 
-        // Upload to Firebase Storage
-        const fileRef = storage.ref(`issues/${Date.now()}_${file.name}`);
-        const uploadTask = await fileRef.put(file);
-        const imageUrl = await uploadTask.ref.getDownloadURL();
+        if(!category) throw new Error("Please select a category");
+
+        // 1. Upload Issue Photo
+        const issueFileRef = storage.ref(`issues/${Date.now()}_issue_${issueFile.name}`);
+        const issueUploadTask = await issueFileRef.put(issueFile);
+        const imageUrl = await issueUploadTask.ref.getDownloadURL();
+
+        // 2. Upload Address Proof
+        const proofFileRef = storage.ref(`proofs/${Date.now()}_proof_${proofFile.name}`);
+        const proofUploadTask = await proofFileRef.put(proofFile);
+        const proofUrl = await proofUploadTask.ref.getDownloadURL();
 
         const lat = 11.25 + (Math.random() * 0.02);
         const lng = 75.77 + (Math.random() * 0.02);
 
         await db.collection("issues").add({
-            category, location, description,
-            beforeImg: imageUrl, afterImg: null,
-            status: "Pending", votes: 0,
+            category,
+            location: `${street1}, ${city}`, // For backward compatibility with listing UI
+            locationDetail: {
+                street1, street2, city, state, zip, country, addrType
+            },
+            description,
+            beforeImg: imageUrl,
+            proofImg: proofUrl,
+            afterImg: null,
+            status: "Pending",
+            votes: 0,
             timestamp: new Date().toISOString(),
-            uid: currentUserUID, lat, lng
+            uid: currentUserUID,
+            lat, lng
         });
 
-        if(window.location.pathname.includes('report.html')) {
+        // Show success and redirect
+        submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submitted Successfully!';
+        submitBtn.style.background = "var(--secondary)";
+        
+        setTimeout(() => {
             window.location.href = 'index.html';
-        } else {
-            hideModal("reportModal");
-            e.target.reset();
-        }
+        }, 1500);
+
     } catch (err) {
-        alert("Upload Failed: " + err.message);
-    } finally {
-        submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload & Submit Report';
+        alert("Report Submission Failed: " + err.message);
+        submitBtn.innerHTML = originalBtnHtml;
         submitBtn.disabled = false;
     }
 }
@@ -627,7 +717,8 @@ function openDetails(id) {
     const html = `
         <div class="details-header">
             <div>
-                <h2>${issue.category} at ${issue.location}</h2>
+                <h2>${issue.category}</h2>
+                <div style="font-size: 1rem; color: var(--text-main); margin-bottom: 1rem;"><i class="fa-solid fa-location-dot"></i> ${issue.locationDetail ? `${issue.locationDetail.street1}, ${issue.locationDetail.city}, ${issue.locationDetail.zip}` : issue.location}</div>
                 <div class="details-badges">
                     <span class="badge ${statusClass}">${issue.status === "Review" ? "Needs Verification" : issue.status}</span>
                     <span class="badge" style="background:#4F46E5;"><i class="fa-regular fa-clock"></i> ${timeAgo(issue.timestamp)}</span>
@@ -641,6 +732,7 @@ function openDetails(id) {
         <p style="font-size: 1.125rem; color: #475569; margin-bottom: 2rem;">${issue.description}</p>
         <div class="media-comparison">
             <div class="media-side"><h4>Problem Reported</h4><img src="${issue.beforeImg}"></div>
+            ${issue.proofImg ? `<div class="media-side"><h4>Address Proof</h4><img src="${issue.proofImg}"></div>` : ''}
             ${issue.afterImg ? `<div class="media-side"><h4>Resolution Proof</h4><img src="${issue.afterImg}"></div>` : ''}
         </div>
         <div class="details-actions">${actionButtons || '<span style="color:#64748B;">No actions available.</span>'}</div>
@@ -750,6 +842,26 @@ function saveSettings() {
     if(toast) {
         toast.style.display = "block";
         setTimeout(() => { toast.style.display = "none"; }, 3000);
+    }
+}
+
+async function handleForgotPassword(type) {
+    const emailInput = document.getElementById(type === 'citizen' ? "citEmail" : "admEmail");
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+        alert("Please enter your email address first so we can send a reset link.");
+        emailInput.focus();
+        return;
+    }
+
+    if (confirm(`Send password reset email to ${email}?`)) {
+        try {
+            await auth.sendPasswordResetEmail(email);
+            alert("Success! Please check your inbox for the password reset link.");
+        } catch (err) {
+            alert("Failed to send reset email: " + err.message);
+        }
     }
 }
 

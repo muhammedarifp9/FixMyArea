@@ -49,63 +49,185 @@
         </div>
     </nav>
 
-    <main style="max-width: 800px; margin: 4rem auto 6rem; padding: 0 1.5rem;">
+    <main style="max-width: 900px; margin: 3rem auto 6rem; padding: 0 1.5rem;">
         
-        <div style="text-align:center; margin-bottom: 2.5rem;">
-            <div style="width:60px; height:60px; border-radius:16px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:1.75rem; margin:0 auto 1.5rem;">
-                <i class="fa-solid fa-camera"></i>
+        <div class="reveal" style="text-align:center; margin-bottom: 3rem;">
+            <div style="width:72px; height:72px; border-radius:24px; background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:white; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 1.5rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);">
+                <i class="fa-solid fa-map-location-dot"></i>
             </div>
-            <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;" data-i18n="reportIssue">Report a Civic Issue</h1>
-            <p style="color: var(--text-muted); font-size: 1.05rem;">Help Kozhikode authorities identify and fix infrastructure problems efficiently.</p>
+            <h1 style="font-size: 2.75rem; font-weight: 900; color: var(--text-main); margin-bottom: 0.75rem; letter-spacing: -0.04em;" data-i18n="reportIssue">Report a Civic Issue</h1>
+            <p style="color: var(--text-muted); font-size: 1.15rem; max-width: 600px; margin: 0 auto;">Help Kozhikode authorities identify and fix infrastructure problems efficiently.</p>
         </div>
 
-        <div style="background:var(--surface); padding:2.5rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md); border:1px solid var(--border-light);">
-            <div style="text-align:center; margin-top: 2rem;" data-auth="guest">
-                <p style="color:var(--text-muted); margin-bottom:1.5rem;">You must be signed in to report an issue.</p>
-                <a href="login.html" class="btn btn-primary">Sign In to Continue</a>
+        <div class="glass reveal" style="padding:0; border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); overflow:hidden; border:1px solid var(--border-light);">
+            <!-- Guest View -->
+            <div id="guestReportView" style="padding:4rem 2.5rem; text-align:center; display:none;" data-auth="guest">
+                <div style="font-size: 4rem; color: var(--text-lighter); margin-bottom: 1.5rem;">
+                    <i class="fa-solid fa-user-lock"></i>
+                </div>
+                <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1rem;">Authentication Required</h2>
+                <p style="color:var(--text-muted); margin-bottom:2.5rem; max-width: 400px; margin-left:auto; margin-right:auto;">You must be signed in to report a civic issue. This helps us ensure reports are genuine and allows you to track progress.</p>
+                <a href="login.html" class="btn btn-primary" style="padding:1rem 2.5rem; font-size: 1.1rem;">Sign In to Continue</a>
             </div>
             
-            <form id="reportForm" data-auth="user">
+            <!-- Authenticated Report Form -->
+            <form id="reportForm" style="padding:3rem 4rem; display:none;" data-auth="user">
                 
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="font-weight:600; color:var(--text-main);">Upload 'Before' Image Verification</label>
-                    <input type="file" id="issueFile" accept="image/png, image/jpeg, image/webp" required style="width:100%; padding:0.85rem; border:1px dashed var(--primary); border-radius:var(--radius-md); background:var(--background); color:var(--text-main);">
+                <!-- 1. Category Section -->
+                <div class="form-group" style="margin-bottom: 2.5rem;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">1. Issue Category</label>
+                    <div class="custom-dropdown-container" id="categoryDropdown" style="width: 100%;">
+                        <div class="custom-dropdown-btn">
+                            <span class="dropdown-selected-text">Select a category</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <input type="hidden" id="issueCategory" required>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-item" data-value="Roads"><i class="fa-solid fa-road"></i> Roads & Potholes</div>
+                            <div class="dropdown-item" data-value="Waste"><i class="fa-solid fa-trash"></i> Public Waste Management</div>
+                            <div class="dropdown-item" data-value="Drainage"><i class="fa-solid fa-water"></i> Drainage & Water Supply</div>
+                            <div class="dropdown-item" data-value="Utilities"><i class="fa-solid fa-lightbulb"></i> Broken Utilities / Lights</div>
+                            <div class="dropdown-item" data-value="Toilets"><i class="fa-solid fa-restroom"></i> Public Toilets Maintenance</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="font-weight:600; color:var(--text-main);">Category</label>
-                    <select id="issueCategory" required style="width:100%; padding:0.85rem; border:1px solid var(--border); border-radius:var(--radius-md); font-size:1rem; background:var(--background); color:var(--text-main);">
-                        <option value="" disabled selected>Select a mapped category</option>
-                        <option value="Roads">🛣️ Roads & Potholes</option>
-                        <option value="Waste">🗑️ Public Waste Management</option>
-                        <option value="Drainage">💧 Drainage & Water Supply</option>
-                        <option value="Utilities">💡 Broken Utilities / Lights</option>
-                        <option value="Toilets">🚻 Public Toilets Maintenance</option>
-                    </select>
+                <!-- 2. Location Details Section -->
+                <div style="margin-bottom: 2.5rem; padding: 2rem; background: rgba(248, 250, 252, 0.5); border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.5rem;">2. Location Details</label>
+                    
+                    <div class="form-group">
+                        <label>Street Address (Line 1)*</label>
+                        <input type="text" id="loc_street1" placeholder="Building, Street Name, Landmark" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Street Address (Line 2)</label>
+                        <input type="text" id="loc_street2" placeholder="Apartment, suite, unit, etc. (Optional)">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>City / Town*</label>
+                            <input type="text" id="loc_city" value="Kozhikode" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>State / Region*</label>
+                            <input type="text" id="loc_state" value="Kerala" required>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Postal / ZIP Code*</label>
+                            <input type="text" id="loc_zip" placeholder="673001" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Country*</label>
+                            <select id="loc_country" required>
+                                <option value="India" selected>India</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 2rem; align-items: center; padding-top: 0.5rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.9rem; font-weight:600;">
+                            <input type="radio" name="addr_type" value="new" checked style="width: auto;"> New Address
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.9rem; font-weight:600;">
+                            <input type="radio" name="addr_type" value="update" style="width: auto;"> Address Update
+                        </label>
+                    </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="font-weight:600; color:var(--text-main);">Exact Location / Address</label>
-                    <input type="text" id="issueLocation" placeholder="E.g. Ward 15, Near Central Library" required style="width:100%; padding:0.85rem; border:1px solid var(--border); border-radius:var(--radius-md); font-size:1rem; background:var(--background); color:var(--text-main);">
+                <!-- 3. Uploads Section -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2.5rem;">
+                    <div class="form-group">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">3. Issue Photo</label>
+                        <div class="upload-zone" onclick="document.getElementById('issueFile').click()" style="border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: white;">
+                            <i class="fa-solid fa-camera" style="font-size: 1.5rem; color: var(--text-lighter); margin-bottom: 0.75rem;"></i>
+                            <p style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Upload 'Before' Image</p>
+                            <input type="file" id="issueFile" accept="image/*" required style="display:none;">
+                            <p id="issueFileName" style="font-size: 0.75rem; color: var(--primary); margin-top: 0.5rem; display: none;"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">4. Address Proof</label>
+                        <div class="upload-zone" onclick="document.getElementById('proofFile').click()" style="border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: white;">
+                            <i class="fa-solid fa-file-invoice" style="font-size: 1.5rem; color: var(--text-lighter); margin-bottom: 0.75rem;"></i>
+                            <p style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Upload Proof of Address</p>
+                            <input type="file" id="proofFile" accept="image/*,application/pdf" required style="display:none;">
+                            <p id="proofFileName" style="font-size: 0.75rem; color: var(--primary); margin-top: 0.5rem; display: none;"></p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="font-weight:600; color:var(--text-main);">Detailed Description</label>
-                    <textarea id="issueDescription" rows="5" placeholder="Describe the severity and visibility of the issue here..." required style="width:100%; padding:0.85rem; border:1px solid var(--border); border-radius:var(--radius-md); font-size:1rem; resize:vertical; background:var(--background); color:var(--text-main);"></textarea>
+                <!-- 5. Description -->
+                <div class="form-group" style="margin-bottom: 2.5rem;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">5. Detailed Description</label>
+                    <textarea id="issueDescription" rows="4" placeholder="Describe the severity and visibility of the issue here..." required style="border-radius: var(--radius-lg);"></textarea>
+                </div>
+
+                <!-- 6. Confirmation -->
+                <div style="margin-bottom: 3rem;">
+                    <label style="display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; group;">
+                        <input type="checkbox" required style="width: 20px; height: 20px; margin-top: 0.25rem; cursor: pointer;">
+                        <span style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.5;">
+                            I confirm this address is accurate and updated to the best of my knowledge. Misleading reports may be dismissed.
+                        </span>
+                    </label>
                 </div>
                 
-                <button type="submit" id="btnReportSubmit" class="btn btn-primary btn-block" style="padding:1rem; font-size:1.05rem;">
-                    <i class="fa-solid fa-paper-plane" style="margin-right:0.5rem;"></i> Upload & Submit Report
+                <button type="submit" id="btnReportSubmit" class="btn btn-primary btn-block" style="padding:1.25rem; font-size: 1.15rem; border-radius: var(--radius-lg);">
+                    <i class="fa-solid fa-paper-plane"></i> Upload & Submit Report
                 </button>
             </form>
         </div>
 
     </main>
 
+    <style>
+        .upload-zone:hover {
+            border-color: var(--primary) !important;
+            background: var(--primary-light) !important;
+            transform: translateY(-2px);
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border);
+            background: white;
+            transition: all 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+    </style>
+
+    <script>
+        // File selection feedback
+        document.getElementById('issueFile').onchange = function() {
+            const nameEl = document.getElementById('issueFileName');
+            if(this.files[0]) {
+                nameEl.innerText = "Selected: " + this.files[0].name;
+                nameEl.style.display = "block";
+            }
+        };
+        document.getElementById('proofFile').onchange = function() {
+            const nameEl = document.getElementById('proofFileName');
+            if(this.files[0]) {
+                nameEl.innerText = "Selected: " + this.files[0].name;
+                nameEl.style.display = "block";
+            }
+        };
+    </script>
+
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
     <script src="app.js"></script>
 </body>

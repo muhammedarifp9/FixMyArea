@@ -76,6 +76,9 @@
             <div class="form-group">
                 <label><i class="fa-solid fa-lock"></i> Password</label>
                 <input type="password" id="citPassword" required placeholder="••••••••">
+                <div style="text-align: right; margin-top: 0.5rem;">
+                    <a href="#" onclick="handleForgotPassword('citizen')" style="font-size: 0.8rem; color: var(--primary); font-weight: 600; text-decoration: none;">Forgot Password?</a>
+                </div>
             </div>
             <button type="button" class="btn btn-primary btn-block" onclick="loginUser('citizen')" style="margin-top: 1rem; padding: 1rem;">
                 Sign In <i class="fa-solid fa-arrow-right"></i>
@@ -96,6 +99,9 @@
             <div class="form-group">
                 <label><i class="fa-solid fa-key"></i> Admin Password</label>
                 <input type="password" id="admPassword" required placeholder="••••••••">
+                <div style="text-align: right; margin-top: 0.5rem;">
+                    <a href="#" onclick="handleForgotPassword('admin')" style="font-size: 0.8rem; color: var(--primary); font-weight: 600; text-decoration: none;">Forgot Password?</a>
+                </div>
             </div>
             <button type="button" class="btn btn-primary btn-block" onclick="loginUser('admin')" style="margin-top: 1rem; padding: 1rem;">
                 Access Portal <i class="fa-solid fa-shield-halved"></i>

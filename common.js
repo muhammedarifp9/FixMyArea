@@ -36,8 +36,20 @@ function initNavigation() {
 
 // 3. Global Logout
 function logout() {
-    localStorage.removeItem('fixmyarea_user');
-    window.location.href = 'index.html';
+    // If Firebase Auth is available, sign out there too
+    if (typeof auth !== 'undefined' && auth.signOut) {
+        auth.signOut().then(() => {
+            localStorage.removeItem('fixmyarea_user');
+            window.location.href = 'index.html';
+        }).catch(err => {
+            console.error("Signout error:", err);
+            localStorage.removeItem('fixmyarea_user');
+            window.location.href = 'index.html';
+        });
+    } else {
+        localStorage.removeItem('fixmyarea_user');
+        window.location.href = 'index.html';
+    }
 }
 
 // 4. Reveal Animations
