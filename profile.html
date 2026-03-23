@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FixMyArea - User Profile</title>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <!-- Theme loading and common utils -->
     <script src="common.js"></script>
     <style>
         .profile-container {
@@ -24,8 +22,42 @@
         }
         .huge-avatar {
             width: 100px; height: 100px; border-radius: 50%;
-            color: white; display: flex; align-items: center; justify-content: center;
-            font-size: 3rem; font-weight: 800; box-shadow: var(--shadow-md);
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; font-weight: 800; box-shadow: var(--shadow-md); overflow: hidden;
+        }
+        /* Avatar upload wrapper */
+        .avatar-upload-wrap {
+            position: relative; width: 100px; height: 100px;
+            border-radius: 50%; cursor: pointer; flex-shrink: 0;
+        }
+        .avatar-upload-wrap:hover .avatar-overlay { opacity: 1; }
+        .avatar-overlay {
+            position: absolute; inset: 0; border-radius: 50%;
+            background: rgba(0,0,0,0.50); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; opacity: 0;
+            transition: opacity 0.25s ease; color: #fff; font-size: 0.7rem;
+            gap: 4px; pointer-events: none;
+        }
+        .avatar-overlay i { font-size: 1.3rem; }
+        /* Readonly input styling */
+        #profileForm input[readonly] {
+            background: var(--border-light) !important;
+            cursor: not-allowed !important;
+            color: var(--text-muted) !important;
+        }
+        /* Success banner */
+        .prof-success-banner {
+            display: none; align-items: center; gap: 0.75rem;
+            background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;
+            border-radius: var(--radius-md); padding: 0.875rem 1.25rem;
+            margin-top: 1.5rem; font-weight: 600; animation: fadeIn 0.3s ease;
+        }
+        [data-theme="dark"] .prof-success-banner {
+            background: #064e3b; color: #6ee7b7; border-color: #065f46;
+        }
+        .avatar-uploading {
+            opacity: 0.5; pointer-events: none;
         }
     </style>
 </head>
@@ -70,71 +102,139 @@
 
     <main class="profile-container">
         <div class="profile-header-sec">
-            <div class="profile-header-card">
-                <div class="huge-avatar" id="hugeAvatar"><i class="fa-solid fa-user"></i></div>
+            <!-- Left: avatar + name -->
+            <div style="display:flex; align-items:center; gap:2rem; flex:1;">
+                <!-- Clickable avatar -->
+                <div class="avatar-upload-wrap" id="avatarWrap" onclick="document.getElementById('avatarInput').click()" title="Click to change profile photo">
+                    <div class="huge-avatar" id="hugeAvatar"><i class="fa-solid fa-user"></i></div>
+                    <div class="avatar-overlay">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>Change</span>
+                    </div>
+                </div>
+                <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="handleAvatarChange(this)">
+
                 <div>
                     <h1 style="font-size: 2.5rem; color: var(--text-main); margin-bottom: 0.5rem;" id="displayTitleName">Loading...</h1>
                     <span class="priority-tag Medium" id="displayRoleBadge" style="font-size:1rem; padding: 0.25rem 0.75rem;">Account</span>
                 </div>
             </div>
+
+            <!-- Edit button (hidden in edit mode) -->
+            <button id="btnEditProfile" class="btn btn-outline" onclick="enableEditMode()">
+                <i class="fa-solid fa-pen-to-square"></i> Edit Profile
+            </button>
         </div>
 
         <form id="profileForm" style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
             <div class="form-group" style="grid-column: span 2;">
                 <label>Full Name</label>
-                <input type="text" id="profName" required>
+                <input type="text" id="profName" required readonly>
             </div>
             <div class="form-group">
                 <label>Email Address</label>
-                <input type="email" id="profEmail" readonly style="background:var(--border-light); cursor:not-allowed;" title="Email cannot be changed">
+                <input type="email" id="profEmail" readonly style="cursor:not-allowed;" title="Email cannot be changed">
             </div>
             <div class="form-group">
                 <label>Phone Number</label>
-                <input type="tel" id="profPhone">
+                <input type="tel" id="profPhone" readonly>
             </div>
             <div class="form-group" style="grid-column: span 2;">
                 <label>Kozhikode Ward / Local Area</label>
-                <input type="text" id="profWard">
+                <input type="text" id="profWard" readonly>
             </div>
-            <div style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center; margin-top:2rem; padding-top:2rem; border-top:1px solid var(--border-light);">
-                <button type="button" class="btn btn-outline" onclick="deleteCurrentUserAccount()" style="color:var(--status-reopened); border-color:var(--status-reopened);"><i class="fa-solid fa-user-slash"></i> Delete Account</button>
+
+            <!-- View-mode actions -->
+            <div id="profileActionsView" style="grid-column: span 2; display:flex; align-items:center; margin-top:2rem; padding-top:2rem; border-top:1px solid var(--border-light);">
+                <button type="button" class="btn btn-outline" onclick="deleteCurrentUserAccount()" style="color:var(--status-reopened); border-color:var(--status-reopened);">
+                    <i class="fa-solid fa-user-slash"></i> Delete Account
+                </button>
+            </div>
+
+            <!-- Edit-mode actions -->
+            <div id="profileActionsEdit" style="grid-column: span 2; display:none; justify-content:space-between; align-items:center; margin-top:2rem; padding-top:2rem; border-top:1px solid var(--border-light);">
+                <button type="button" class="btn btn-outline" onclick="deleteCurrentUserAccount()" style="color:var(--status-reopened); border-color:var(--status-reopened);">
+                    <i class="fa-solid fa-user-slash"></i> Delete Account
+                </button>
                 <div style="display:flex; gap:1rem;">
-                    <a href="index.html" class="btn btn-outline" style="padding: 0.85rem 2rem;">Cancel</a>
-                    <button type="button" class="btn btn-primary" onclick="saveProfile()" style="padding: 0.85rem 2rem;"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+                    <button type="button" class="btn btn-outline" onclick="cancelEditMode()" style="padding: 0.85rem 2rem;">
+                        <i class="fa-solid fa-xmark"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnSaveProfile" onclick="saveProfile()" style="padding: 0.85rem 2rem;">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Profile
+                    </button>
                 </div>
             </div>
         </form>
-        <div id="profSuccess" style="color:var(--status-resolved); font-weight:600; text-align:center; display:none; margin-top:2rem;"><i class="fa-solid fa-circle-check"></i> Profile updated successfully!</div>
+
+        <!-- Non-blocking success banner -->
+        <div id="profSuccess" class="prof-success-banner">
+            <i class="fa-solid fa-circle-check fa-lg"></i> Profile updated successfully!
+        </div>
     </main>
 
-    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="app.js"></script>
     <script>
+        let _originalProfile = {};
+
         document.addEventListener("DOMContentLoaded", () => {
             const checkAuth = setInterval(async () => {
                 if (supabase && (await supabase.auth.getSession()).data.session) {
                     clearInterval(checkAuth);
                     const user = (await supabase.auth.getUser()).data.user;
-                    
                     const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
                     const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-                    
+
                     const role = roleData?.role || 'citizen';
                     const name = profile?.full_name || user.email.split('@')[0];
-                    
-                    document.getElementById("hugeAvatar").innerText = name.charAt(0).toUpperCase();
+
+                    // Render avatar
+                    const av = document.getElementById('hugeAvatar');
+                    if (profile?.avatar_url) {
+                        av.innerHTML = `<img src="${profile.avatar_url}" alt="${name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                    } else {
+                        av.innerHTML = `<span>${name.charAt(0).toUpperCase()}</span>`;
+                    }
+
                     document.getElementById("displayTitleName").innerText = name;
-                    document.getElementById("displayRoleBadge").innerText = role.charAt(0).toUpperCase() + role.slice(1) + " Account";
-                    
-                    document.getElementById("profName").value = name;
-                    document.getElementById("profEmail").value = user.email || "";
-                    document.getElementById("profPhone").value = profile?.phone || "";
-                    document.getElementById("profWard").value = profile?.ward || "";
+                    document.getElementById("displayRoleBadge").innerText =
+                        role.charAt(0).toUpperCase() + role.slice(1) + " Account";
+
+                    _originalProfile = {
+                        name, email: user.email || "",
+                        phone: profile?.phone || "", ward: profile?.ward || ""
+                    };
+
+                    document.getElementById("profName").value = _originalProfile.name;
+                    document.getElementById("profEmail").value = _originalProfile.email;
+                    document.getElementById("profPhone").value = _originalProfile.phone;
+                    document.getElementById("profWard").value = _originalProfile.ward;
                 }
             }, 500);
         });
+
+        function enableEditMode() {
+            ['profName', 'profPhone', 'profWard'].forEach(id => {
+                document.getElementById(id).removeAttribute('readonly');
+            });
+            document.getElementById('btnEditProfile').style.display = 'none';
+            document.getElementById('profileActionsView').style.display = 'none';
+            document.getElementById('profileActionsEdit').style.display = 'flex';
+            document.getElementById('profSuccess').style.display = 'none';
+        }
+
+        function cancelEditMode() {
+            document.getElementById("profName").value = _originalProfile.name;
+            document.getElementById("profPhone").value = _originalProfile.phone;
+            document.getElementById("profWard").value = _originalProfile.ward;
+            ['profName', 'profPhone', 'profWard'].forEach(id => {
+                document.getElementById(id).setAttribute('readonly', true);
+            });
+            document.getElementById('btnEditProfile').style.display = '';
+            document.getElementById('profileActionsView').style.display = 'flex';
+            document.getElementById('profileActionsEdit').style.display = 'none';
+        }
     </script>
 </body>
 </html>

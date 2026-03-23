@@ -474,14 +474,119 @@ function showModal(id) { document.getElementById(id).style.display = "flex"; }
 function hideModal(id) { document.getElementById(id).style.display = "none"; }
 
 async function saveProfile() {
-    const user = (await supabase.auth.getUser()).data.user;
-    await supabase.from('profiles').upsert({
-        user_id: user.id,
-        full_name: document.getElementById("profName").value,
-        phone: document.getElementById("profPhone").value,
-        ward: document.getElementById("profWard").value
-    });
-    alert("Profile Saved!");
+    const btn = document.getElementById('btnSaveProfile');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...'; }
+    try {
+        const user = (await supabase.auth.getUser()).data.user;
+        const { error } = await supabase.from('profiles').upsert({
+            user_id: user.id,
+            full_name: document.getElementById("profName").value,
+            phone: document.getElementById("profPhone").value,
+            ward: document.getElementById("profWard").value
+        });
+        if (error) throw error;
+
+        // Update the header name display
+        const newName = document.getElementById("profName").value;
+        const displayName = document.getElementById('displayTitleName');
+        if (displayName) displayName.innerText = newName;
+
+        // Return to view mode
+        if (typeof cancelEditMode === 'function') {
+            // Update _originalProfile to the new saved values
+            if (typeof _originalProfile !== 'undefined') {
+                _originalProfile.name = newName;
+                _originalProfile.phone = document.getElementById('profPhone').value;
+                _originalProfile.ward = document.getElementById('profWard').value;
+            }
+            cancelEditMode();
+        }
+
+        // Show success banner
+        const banner = document.getElementById('profSuccess');
+        if (banner) {
+            banner.style.display = 'flex';
+            setTimeout(() => { banner.style.display = 'none'; }, 4000);
+        }
+    } catch (err) {
+        alert('Error saving profile: ' + err.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Profile'; }
+    }
+}
+
+/**
+ * Called when user selects a new avatar image.
+ * Immediately previews it and uploads to Supabase Storage.
+ */
+async function handleAvatarChange(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Validate: images only, max 5MB
+    if (!file.type.startsWith('image/')) { alert('Please select an image file.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB.'); return; }
+
+    const wrap = document.getElementById('avatarWrap');
+    const av = document.getElementById('hugeAvatar');
+
+    // Optimistic preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        av.innerHTML = `<img src="${e.target.result}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    };
+    reader.readAsDataURL(file);
+
+    if (wrap) wrap.classList.add('avatar-uploading');
+
+    try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) { alert('Please log in to update your photo.'); return; }
+
+        const ext = file.name.split('.').pop();
+        const path = `${user.id}/avatar.${ext}`;
+
+        // Upload (upsert = overwrite existing)
+        const { error: upErr } = await supabase.storage
+            .from('avatars')
+            .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw upErr;
+
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+
+        // Save URL to profiles table
+        const { error: dbErr } = await supabase.from('profiles').upsert({
+            user_id: user.id,
+            avatar_url: publicUrl
+        });
+        if (dbErr) throw dbErr;
+
+        // Show a brief success flash on the avatar
+        av.style.outline = '3px solid var(--primary)';
+        setTimeout(() => { av.style.outline = ''; }, 2000);
+    } catch (err) {
+        console.error('Avatar upload failed:', err.message);
+        alert('Photo upload failed: ' + err.message + '\nYour text profile info was not affected.');
+    } finally {
+        if (wrap) wrap.classList.remove('avatar-uploading');
+        // Reset input so same file can be chosen again
+        input.value = '';
+    }
+}
+
+async function deleteCurrentUserAccount() {
+    if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
+    try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) return;
+        // Delete profile data first
+        await supabase.from('profiles').delete().eq('user_id', user.id);
+        await supabase.auth.signOut();
+        alert('Account deleted. You have been signed out.');
+        window.location.href = 'index.html';
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
 }
 
 function saveSettings() {
