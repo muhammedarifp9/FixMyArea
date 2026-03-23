@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixMyArea - Connect & Join Us</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body style="background: var(--background);">
+
+    <!-- Simple Navigation -->
+    <nav class="navbar" style="border-bottom: 1px solid var(--border);">
+        <a href="index.html" class="logo" style="text-decoration:none;">
+            <i class="fa-solid fa-map-location-dot"></i> FixMyArea
+        </a>
+        <div class="nav-links" style="display:flex; gap:2rem;">
+            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Home</a>
+            <a href="about.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">About Us</a>
+            <a href="connect.html" style="text-decoration:none; color:var(--primary); font-weight:700;">Connect & Join</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main style="max-width: 900px; margin: 4rem auto; padding: 2rem;">
+        
+        <div style="text-align:center; margin-bottom: 3rem;">
+            <h1 style="font-size:3rem; font-weight:800; color:var(--primary); margin-bottom:1rem;">Join the Movement</h1>
+            <p style="font-size:1.25rem; color:var(--text-muted);">It takes a community to raise a city. Volunteer with us, report local issues, and help us hold our infrastructure accountable.</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-bottom: 4rem;">
+            
+            <!-- Connect Form -->
+            <div style="background:white; padding:2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
+                <h2 style="margin-bottom:1.5rem;"><i class="fa-solid fa-envelope" style="color:var(--primary);"></i> Connect With Us</h2>
+                <form onsubmit="event.preventDefault(); alert('Message Sent! Thank you for reaching out.');">
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" required placeholder="John Doe" style="width:100%; padding:0.75rem; border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:1rem; font-family:inherit;">
+                    </div>
+                    <div class="form-group">
+                        <label>Your Email</label>
+                        <input type="email" required placeholder="john@example.com" style="width:100%; padding:0.75rem; border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:1rem; font-family:inherit;">
+                    </div>
+                    <div class="form-group">
+                        <label>Message</label>
+                        <textarea rows="4" required placeholder="How can we help you?" style="width:100%; padding:0.75rem; border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:1rem; font-family:inherit; resize:vertical;"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Send Message</button>
+                </form>
+            </div>
+
+            <!-- Join Us Info -->
+            <div style="display:flex; flex-direction:column; gap:2rem;">
+                <div style="background:white; padding:2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
+                    <h3 style="margin-bottom:0.5rem;"><i class="fa-solid fa-handshake-angle" style="color:var(--secondary);"></i> Volunteer</h3>
+                    <p style="color:var(--text-muted); font-size:0.95rem;">Join our on-ground verification team in Kozhikode. You'll help verify issues flagged by other citizens and ensure cleanup drives are actually successful.</p>
+                    <a href="mailto:volunteer@fixmyarea.com" class="btn btn-outline" style="margin-top:1rem; display:inline-block;">Email Us</a>
+                </div>
+
+                <div style="background:var(--surface); padding:2rem; border-radius:var(--radius-lg); border:1px solid var(--border);">
+                    <h3 style="margin-bottom:0.5rem;"><i class="fa-solid fa-building-columns" style="color:var(--text-main);"></i> Authority Partners</h3>
+                    <p style="color:var(--text-muted); font-size:0.95rem;">If you represent a municipal ward, local government body, or NGO in Kerala and would like official access to our admin dashboard to clear local issues, please contact us directly.</p>
+                    <a href="mailto:official@fixmyarea.com" style="color:var(--primary); font-weight:600; display:block; margin-top:1rem;">official@fixmyarea.com</a>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+</body>
+</html>

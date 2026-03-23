@@ -185,6 +185,9 @@ function handleSuccessfulLogin(user, role) {
 
     document.getElementById("loginOverlay").style.display = "none";
     document.getElementById("appContainer").style.display = "block";
+    
+    const navLinks = document.getElementById("desktopNavLinks");
+    if(navLinks) navLinks.style.display = "flex";
 
     document.getElementById("profileName").innerHTML = currentRole === "admin" ?
         '<i class="fa-solid fa-shield-halved" style="color:var(--primary);"></i> Authority Portal' :
