@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixMyArea - Report. Track. Verify.</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fa-solid fa-map-location-dot"></i> FixMyArea
+        </div>
+        <div class="nav-actions">
+            <div class="role-toggle">
+                <span id="roleLabel">Citizen View</span>
+                <label class="switch">
+                    <input type="checkbox" id="roleToggle">
+                    <span class="slider round"></span>
+                </label>
+                <span>Admin View</span>
+            </div>
+            <button id="btnOpenReport" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Report Issue</button>
+        </div>
+    </nav>
+
+    <header class="hero-section">
+        <div class="hero-content">
+            <h1>Empowering citizens to fix their local areas</h1>
+            <p>Report issues, track progress, and verify resolutions transparently.</p>
+        </div>
+        
+        <div class="stats-panel">
+            <div class="stat-card">
+                <h3 id="statTotal">0</h3>
+                <p>Total Issues</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="statPending">0</h3>
+                <p>Pending Review</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="statResolved">0</h3>
+                <p>Successfully Verified</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <div class="filters">
+            <div class="filter-group">
+                <label for="categoryFilter">Category:</label>
+                <select id="categoryFilter">
+                    <option value="All">All Categories</option>
+                    <option value="Roads">Roads & Potholes</option>
+                    <option value="Waste">Public Waste</option>
+                    <option value="Drainage">Drainage & Water</option>
+                    <option value="Utilities">Public Utilities</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter">
+                    <option value="All">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Review">Needs Verification</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="sortFilter">Sort By:</label>
+                <select id="sortFilter">
+                    <option value="recent">Most Recent</option>
+                    <option value="priority">Highest Priority</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="issuesGrid" class="issues-grid">
+            <!-- Cards will be dynamically injected here -->
+        </div>
+    </main>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeReport">&times;</span>
+            <h2>Report a New Issue</h2>
+            <form id="reportForm">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="issueCategory" required>
+                        <option value="" disabled selected>Select a category</option>
+                        <option value="Roads">Roads & Potholes</option>
+                        <option value="Waste">Public Waste</option>
+                        <option value="Drainage">Drainage & Water</option>
+                        <option value="Utilities">Public Utilities</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Location / Address</label>
+                    <input type="text" id="issueLocation" placeholder="E.g. Main Street, near Central Park" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="issueDescription" rows="4" placeholder="Describe the issue in detail..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Upload 'Before' Image URL (Simulated Upload)</label>
+                    <input type="url" id="issueImage" placeholder="https://example.com/pothole.jpg" required value="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Resolution Modal -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeAdmin">&times;</span>
+            <h2>Submit Resolution Proof</h2>
+            <p>Upload a photo proving the issue has been fixed to send it for public verification.</p>
+            <form id="adminForm">
+                <input type="hidden" id="adminIssueId">
+                <div class="form-group">
+                    <label>Upload 'After' Image URL (Simulated Upload)</label>
+                    <input type="url" id="adminAfterImage" placeholder="https://example.com/fixed_road.jpg" required value="https://images.unsplash.com/photo-1584812301548-7323861fb16e?auto=format&fit=crop&q=80&w=400">
+                </div>
+                <button type="submit" class="btn btn-success btn-block">Submit for Verification</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Public Verification Modal -->
+    <div id="verifyModal" class="modal">
+        <div class="modal-content verify-content">
+            <span class="close" id="closeVerify">&times;</span>
+            <h2>Community Verification</h2>
+            <p>Please review the before and after images to ensure the issue is completely resolved.</p>
+            
+            <div class="comparison-container">
+                <div class="comparison-side">
+                    <h4>Before</h4>
+                    <img id="verifyBeforeImg" src="" alt="Before">
+                </div>
+                <div class="comparison-side">
+                    <h4>After (Proof)</h4>
+                    <img id="verifyAfterImg" src="" alt="After">
+                </div>
+            </div>
+            
+            <div class="verification-actions">
+                <button id="btnRejectFix" class="btn btn-danger"><i class="fa-solid fa-xmark"></i> Reject & Reopen</button>
+                <button id="btnConfirmFix" class="btn btn-success"><i class="fa-solid fa-check"></i> Confirm Fixed</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
