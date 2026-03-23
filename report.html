@@ -35,14 +35,14 @@
             <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars"></i></button>
             <a href="index.html" class="logo" style="text-decoration:none;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</a>
         </div>
-        <div class="nav-links" style="display:flex; gap:2rem;">
-            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;" data-i18n="dashboard">Dashboard</a>
-            <a href="profile.html" style="text-decoration:none; color:var(--text-main); font-weight:600;" data-auth="user" data-i18n="profile">Profile</a>
-            <a href="noti.html" style="text-decoration:none; color:var(--text-main); font-weight:600;" data-auth="user" data-i18n="latestNews">Notifications</a>
-            <a href="login.html" class="btn btn-outline" style="padding:0.4rem 1.2rem; border-radius:var(--radius-md);" data-auth="guest">Sign In</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link" data-i18n="dashboard">Dashboard</a>
+            <a href="profile.html" class="nav-link" data-auth="user" data-i18n="profile">Profile</a>
+            <a href="noti.html" class="nav-link" data-auth="user" data-i18n="latestNews">Notifications</a>
+            <a href="about.html" class="nav-link" data-i18n="about">About Us</a>
+            <a href="login.html" class="btn btn-outline" data-auth="guest">Sign In</a>
         </div>
         <div class="nav-actions" data-auth="user">
-            <!-- Simplified Profile dropdown -->
             <button onclick="window.location.href='profile.html'" class="btn btn-outline" style="border:none; padding:0.5rem;" title="Go to Profile">
                 <i class="fa-solid fa-user-circle fa-2x" style="color:var(--text-muted);"></i>
             </button>
@@ -61,7 +61,7 @@
 
         <div class="glass reveal" style="padding:0; border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); overflow:hidden; border:1px solid var(--border-light);">
             <!-- Guest View -->
-            <div id="guestReportView" style="padding:4rem 2.5rem; text-align:center; display:none;" data-auth="guest">
+            <div id="guestReportView" style="padding:4rem 2.5rem; text-align:center; display:none;" data-auth="guest" data-display="block">
                 <div style="font-size: 4rem; color: var(--text-lighter); margin-bottom: 1.5rem;">
                     <i class="fa-solid fa-user-lock"></i>
                 </div>
@@ -71,7 +71,7 @@
             </div>
             
             <!-- Authenticated Report Form -->
-            <form id="reportForm" style="padding:3rem 4rem; display:none;" data-auth="user">
+            <form id="reportForm" style="padding:3rem 4rem; display:none;" data-auth="user" data-display="block">
                 
                 <!-- 1. Category Section -->
                 <div class="form-group" style="margin-bottom: 2.5rem;">
@@ -171,7 +171,7 @@
 
                 <!-- 6. Confirmation -->
                 <div style="margin-bottom: 3rem;">
-                    <label style="display: flex; align-items: flex-start; gap: 1rem; cursor: pointer; group;">
+                    <label style="display: flex; align-items: flex-start; gap: 1rem; cursor: pointer;">
                         <input type="checkbox" required style="width: 20px; height: 20px; margin-top: 0.25rem; cursor: pointer;">
                         <span style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.5;">
                             I confirm this address is accurate and updated to the best of my knowledge. Misleading reports may be dismissed.
@@ -223,11 +223,8 @@
         };
     </script>
 
-    <!-- Firebase SDK Compat -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="app.js"></script>
 </body>

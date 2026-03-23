@@ -1,33 +1,20 @@
 /*************************************************
- * 1. FIREBASE CONFIGURATION
+ * 1. SUPABASE CONFIGURATION
  *************************************************/
-const firebaseConfig = {
-    apiKey: "AIzaSyBmCi3y9OwTsMNGLaiOSOTjX3L3wNqUJ0Y",
-    authDomain: "fixmyarea10.firebaseapp.com",
-    projectId: "fixmyarea10",
-    storageBucket: "fixmyarea10.firebasestorage.app",
-    messagingSenderId: "659265017360",
-    appId: "1:659265017360:web:30d21eb2cbdc5366f95c95",
-    measurementId: "G-C662JRQXY9"
-};
+const SUPABASE_URL = "https://jzvroggvpgnbvtmyadxv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_GjDs6el6czW7VSOlcp65Rg_RmErMInn";
 
-// Initialize Firebase
-let app, auth, db, storage;
-if (firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
-    try {
-        app = firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-        // Check if storage is available (since some pages might miss the SDK)
-        if (typeof firebase.storage === 'function') {
-            storage = firebase.storage();
-        } else {
-            console.warn("Firebase Storage SDK not loaded. Storage features will be unavailable.");
-        }
-    } catch (err) {
-        console.error("Firebase Initialization Error:", err);
-    }
+let supabase;
+try {
+    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("Supabase initialized successfully.");
+} catch (err) {
+    console.error("Supabase Initialization Error:", err);
 }
+
+// Global state shorthand for compatibility with existing functions
+const auth = supabase ? supabase.auth : null;
+const db = supabase; 
 
 /*************************************************
  * 2. GLOBAL STATE & HELPERS
@@ -167,15 +154,6 @@ function applyLanguage(lang) {
             }
         }
     });
-    // Handle attributes like title and aria-label
-    document.querySelectorAll("[data-i18n-title]").forEach(el => {
-        const key = el.getAttribute("data-i18n-title");
-        if (t[key]) el.title = t[key];
-    });
-    document.querySelectorAll("[data-i18n-label]").forEach(el => {
-        const key = el.getAttribute("data-i18n-label");
-        if (t[key]) el.setAttribute("aria-label", t[key]);
-    });
 }
 
 function applyTheme(theme) {
@@ -184,11 +162,6 @@ function applyTheme(theme) {
     } else {
         document.documentElement.removeAttribute('data-theme');
     }
-}
-
-// Bridge for settings.html
-function applyThemePreference(theme) {
-    applyTheme(theme);
 }
 
 function timeAgo(dateString) {
@@ -218,43 +191,33 @@ function getPriority(votes) {
  * 3. INITIALIZATION & LISTENERS
  *************************************************/
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Initialize UI Preferences Immediately (Independent of Firebase)
     const currentTheme = localStorage.getItem("fixmyarea_theme") || "light";
     const currentLang = localStorage.getItem("fixmyarea_lang") || "en";
     applyTheme(currentTheme);
     applyLanguage(currentLang);
+    initMap();
 
-    if (!app) {
-        console.warn("App core not initialized. Some features may be limited.");
-        return;
-    }
-
-    // 2. Setup Events
     setupEventListeners();
 
-    // 3. Firebase Auth Listener
-    auth.onAuthStateChanged(async user => {
-        if (user) {
-            try {
-                let doc = await db.collection("users").doc(user.uid).get();
-                let role = "citizen";
-                let name = user.displayName || "Anonymous";
-                
-                if (doc.exists) {
-                    role = doc.data().role || "citizen";
-                    name = doc.data().name || name;
+    if (supabase) {
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            const user = session?.user;
+            if (user) {
+                try {
+                    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+                    const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).single();
+                    const role = roleData?.role || "citizen";
+                    const name = profile?.full_name || user.email.split('@')[0];
+                    handleSuccessfulLogin({ uid: user.id, email: user.email }, role, name);
+                } catch(e) { 
+                    handleSuccessfulLogin({ uid: user.id, email: user.email }, "citizen", "User");
                 }
-                
-                handleSuccessfulLogin(user, role, name);
-            } catch(e) { 
-                handleSuccessfulLogin(user, "citizen", "User");
+            } else {
+                handleLogoutUI();
             }
-        } else {
-            handleLogoutUI();
-        }
-    });
+        });
+    }
 
-    // Storage Event for Multi-tab Sync
     window.addEventListener('storage', (e) => {
         if (e.key === 'fixmyarea_theme') applyTheme(e.newValue);
         if (e.key === 'fixmyarea_lang') applyLanguage(e.newValue);
@@ -268,18 +231,12 @@ function setupEventListeners() {
         else showModal("reportModal");
     });
 
-    // Special handling for report.html guest view
     if(window.location.pathname.includes('report.html')) {
         const guestView = document.getElementById("guestReportView");
         const userView = document.getElementById("reportForm");
         if(guestView && userView) {
-            if(currentUserUID) {
-                guestView.style.display = "none";
-                userView.style.display = "block";
-            } else {
-                guestView.style.display = "block";
-                userView.style.display = "none";
-            }
+            if(currentUserUID) { guestView.style.display = "none"; userView.style.display = "block"; }
+            else { guestView.style.display = "block"; userView.style.display = "none"; }
         }
     }
     
@@ -290,28 +247,17 @@ function setupEventListeners() {
     const searchInput = document.getElementById("searchInput");
     if(searchInput) searchInput.addEventListener("input", renderIssues);
 
-    // Dropdowns
     document.querySelectorAll(".custom-dropdown-container").forEach(container => {
         const btn = container.querySelector(".custom-dropdown-btn");
         if(!btn) return;
         const hiddenInput = container.querySelector("input[type='hidden']");
         const selectedText = container.querySelector(".dropdown-selected-text");
-        
-        btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            document.querySelectorAll(".custom-dropdown-container").forEach(c => {
-                if(c !== container) c.classList.remove("active");
-            });
-            container.classList.toggle("active");
-        });
-        
+        btn.addEventListener("click", (e) => { e.stopPropagation(); container.classList.toggle("active"); });
         container.querySelectorAll(".dropdown-item").forEach(item => {
             item.addEventListener("click", (e) => {
                 e.stopPropagation();
                 selectedText.innerText = item.innerText;
                 hiddenInput.value = item.getAttribute("data-value");
-                container.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("selected"));
-                item.classList.add("selected");
                 container.classList.remove("active");
                 renderIssues();
             });
@@ -319,20 +265,11 @@ function setupEventListeners() {
     });
 
     const profileBtn = document.getElementById("btnProfileToggle");
-    if(profileBtn) {
-        profileBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            document.getElementById("userProfile").classList.toggle("active");
-        });
-    }
-
-    document.addEventListener("click", () => {
-        document.querySelectorAll(".custom-dropdown-container, .profile-dropdown-container").forEach(c => c.classList.remove("active"));
-    });
+    if(profileBtn) profileBtn.addEventListener("click", (e) => { e.stopPropagation(); document.getElementById("userProfile").classList.toggle("active"); });
+    document.addEventListener("click", () => document.querySelectorAll(".custom-dropdown-container, .profile-dropdown-container").forEach(c => c.classList.remove("active")));
 
     const reportForm = document.getElementById("reportForm");
     if(reportForm) reportForm.addEventListener("submit", handleReportSubmit);
-    
     const adminForm = document.getElementById("adminForm");
     if(adminForm) adminForm.addEventListener("submit", handleAdminSubmit);
 }
@@ -340,561 +277,215 @@ function setupEventListeners() {
 function handleSuccessfulLogin(user, role, name) {
     currentUserUID = user.uid;
     currentRole = role;
-
-    // Sync with common.js
     localStorage.setItem('fixmyarea_user', JSON.stringify({ uid: user.uid, role, name }));
     if (typeof initNavigation === "function") initNavigation();
 
-    // Update UI elements for report.html
-    const guestView = document.getElementById("guestReportView");
-    const userView = document.getElementById("reportForm");
-    if(guestView && userView) {
-        guestView.style.display = "none";
-        userView.style.display = "block";
-    }
-    const loginOverlay = document.getElementById("loginOverlay");
-    if(loginOverlay) loginOverlay.style.display = "none";
-    
-    const appContainer = document.getElementById("appContainer");
-    if(appContainer) appContainer.style.display = "block";
-
-    const navLinks = document.getElementById("desktopNavLinks");
-    if(navLinks) navLinks.style.display = "flex";
-
     const profileNameEl = document.getElementById("profileName");
     if(profileNameEl) profileNameEl.innerText = name;
-    
-    const navUserNameEl = document.getElementById("navUserName");
-    if(navUserNameEl) navUserNameEl.innerText = name;
-
     const initialsEl = document.getElementById("profileAvatarInitials");
     if(initialsEl) {
         initialsEl.innerText = name.substring(0, 1).toUpperCase();
         initialsEl.style.background = "var(--primary)";
-        initialsEl.style.color = "white";
     }
-
-    const reportBtn = document.getElementById("btnOpenReport");
-    if(reportBtn) reportBtn.style.display = currentRole === "admin" ? "none" : "inline-flex";
-
-    if (!mapInitialized) initMap();
-    else if(leafletMap) leafletMap.invalidateSize();
-
     listenToIssues();
 }
 
 function handleLogoutUI() {
     currentUserUID = null;
     currentRole = null;
-    
-    // Sync with common.js
     localStorage.removeItem('fixmyarea_user');
     if (typeof initNavigation === "function") initNavigation();
+    listenToIssues();
+}
 
-    // Some pages might require redirect if not logged in
-    const restrictedPages = ['profile.html', 'settings.html', 'report.html'];
-    const currentPage = window.location.pathname.split('/').pop();
-    if(restrictedPages.includes(currentPage)) {
+/*************************************************
+ * 4. AUTH OPERATIONS
+ *************************************************/
+async function registerUser(portalType) {
+    const email = portalType === 'citizen' ? document.getElementById('regEmail').value : document.getElementById('admRegEmail').value;
+    const password = portalType === 'citizen' ? document.getElementById('regPassword').value : document.getElementById('admRegPassword').value;
+    const fullName = portalType === 'citizen' ? document.getElementById('regName').value : document.getElementById('admRegName').value;
+    const phone = portalType === 'citizen' ? document.getElementById('regPhone').value : "";
+    const ward = portalType === 'citizen' ? document.getElementById('regWard').value : document.getElementById('admRegDept').value;
+    const errorEl = portalType === 'citizen' ? document.getElementById('citError') : document.getElementById('admError');
+
+    try {
+        const { data, error } = await supabase.auth.signUp({
+            email, password, options: { data: { full_name: fullName, phone, ward } }
+        });
+        if (error) throw error;
+        alert("Success! Check email for verification.");
         window.location.href = 'login.html';
-        return;
-    }
-
-    // On index.html, just update UI
-    const navLinks = document.getElementById("desktopNavLinks");
-    if(navLinks) navLinks.style.display = "none";
-    
-    const initialsEl = document.getElementById("profileAvatarInitials");
-    if(initialsEl) initialsEl.innerHTML = '<i class="fa-solid fa-user"></i>';
-    
-    const profileNameEl = document.getElementById("profileName");
-    if(profileNameEl) profileNameEl.innerText = "Sign In";
-
-    if (!mapInitialized) initMap();
-    listenToIssues(); // Guest mode
-
-    // Update UI elements for report.html guest view
-    const guestView = document.getElementById("guestReportView");
-    const userView = document.getElementById("reportForm");
-    if(guestView && userView) {
-        guestView.style.display = "block";
-        userView.style.display = "none";
+    } catch (err) {
+        if (errorEl) { errorEl.innerText = err.message; errorEl.style.display = 'block'; }
     }
 }
 
-function logout() {
-    auth.signOut().then(() => {
-        localStorage.removeItem("fixmyarea_user");
-        window.location.href = "index.html";
-    });
+async function loginUser(portalType) {
+    const email = portalType === 'citizen' ? document.getElementById('citEmail').value : document.getElementById('admEmail').value;
+    const password = portalType === 'citizen' ? document.getElementById('citPassword').value : document.getElementById('admPassword').value;
+    const errorEl = portalType === 'citizen' ? document.getElementById('citError') : document.getElementById('admError');
+
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        window.location.href = 'index.html';
+    } catch (err) {
+        if (errorEl) { errorEl.innerText = err.message; errorEl.style.display = 'block'; }
+    }
+}
+
+async function logout() {
+    await supabase.auth.signOut();
+    localStorage.removeItem("fixmyarea_user");
+    window.location.href = "index.html";
 }
 
 /*************************************************
  * 5. DATABASE OPERATIONS
  *************************************************/
-function listenToIssues() {
-    const spinner = document.getElementById("loadingSpinner");
-    if(spinner) spinner.style.display = "block";
-
-    db.collection("issues").onSnapshot((snapshot) => {
-        if(spinner) spinner.style.display = "none";
-        dbIssues = [];
-        snapshot.forEach((doc) => {
-            dbIssues.push({ id: doc.id, ...doc.data() });
-        });
-        renderIssues();
-    });
+async function listenToIssues() {
+    const { data, error } = await supabase.from('issues').select('*').order('created_at', { ascending: false });
+    if (error) return;
+    dbIssues = data.map(i => ({
+        id: i.id, category: i.category, location: i.location_text, description: i.description,
+        beforeImg: i.before_image_url, afterImg: i.after_image_url, 
+        status: mapSupabaseStatusToUI(i.status), votes: i.votes_count, timestamp: i.created_at,
+        lat: i.latitude, lng: i.longitude
+    }));
+    renderIssues();
 }
 
-function upvoteIssue(id, event) {
+function mapSupabaseStatusToUI(status) {
+    const m = { 'pending_moderation': 'Moderation', 'pending': 'Pending', 'in_progress': 'In Progress', 'review': 'Review', 'resolved': 'Resolved' };
+    return m[status] || status;
+}
+
+async function upvoteIssue(id, event) {
     if (event) event.stopPropagation();
-    if (!currentUserUID) { window.location.href = 'login.html'; return; }
-    
-    const issueRef = db.collection("issues").doc(id);
-    db.runTransaction(async (transaction) => {
-        const doc = await transaction.get(issueRef);
-        if (doc.exists) {
-            transaction.update(issueRef, { votes: (doc.data().votes || 0) + 1 });
-        }
-    });
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) { window.location.href = 'login.html'; return; }
+    try {
+        await supabase.from('issue_votes').insert([{ issue_id: id, user_id: user.id }]);
+        const { data } = await supabase.from('issues').select('votes_count').eq('id', id).single();
+        await supabase.from('issues').update({ votes_count: (data.votes_count || 0) + 1 }).eq('id', id);
+        listenToIssues();
+    } catch (e) { console.error(e); }
 }
 
 async function handleReportSubmit(e) {
     e.preventDefault();
     const submitBtn = document.getElementById("btnReportSubmit");
-    const originalBtnHtml = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading Files...';
     submitBtn.disabled = true;
-
     try {
-        const issueFile = document.getElementById("issueFile").files[0];
-        const proofFile = document.getElementById("proofFile").files[0];
-        const category = document.getElementById("issueCategory").value;
-        const street1 = document.getElementById("loc_street1").value;
-        const street2 = document.getElementById("loc_street2").value;
-        const city = document.getElementById("loc_city").value;
-        const state = document.getElementById("loc_state").value;
-        const zip = document.getElementById("loc_zip").value;
-        const country = document.getElementById("loc_country").value;
-        const addrTypeInput = document.querySelector('input[name="addr_type"]:checked');
-        const addrType = addrTypeInput ? addrTypeInput.value : "new";
-        const description = document.getElementById("issueDescription").value;
+        const file = document.getElementById("issueFile").files[0];
+        const fileName = `${Date.now()}_${file.name}`;
+        await supabase.storage.from('issue-images').upload(`before/${fileName}`, file);
+        const { data: { publicUrl } } = supabase.storage.from('issue-images').getPublicUrl(`before/${fileName}`);
 
-        if(!category) throw new Error("Please select a category");
-
-        // 1. Upload Issue Photo
-        const issueFileRef = storage.ref(`issues/${Date.now()}_issue_${issueFile.name}`);
-        const issueUploadTask = await issueFileRef.put(issueFile);
-        const imageUrl = await issueUploadTask.ref.getDownloadURL();
-
-        // 2. Upload Address Proof
-        const proofFileRef = storage.ref(`proofs/${Date.now()}_proof_${proofFile.name}`);
-        const proofUploadTask = await proofFileRef.put(proofFile);
-        const proofUrl = await proofUploadTask.ref.getDownloadURL();
-
-        const lat = 11.25 + (Math.random() * 0.02);
-        const lng = 75.77 + (Math.random() * 0.02);
-
-        await db.collection("issues").add({
-            category,
-            location: `${street1}, ${city}`, // For backward compatibility with listing UI
-            locationDetail: {
-                street1, street2, city, state, zip, country, addrType
-            },
-            description,
-            beforeImg: imageUrl,
-            proofImg: proofUrl,
-            afterImg: null,
-            status: "Pending",
-            votes: 0,
-            timestamp: new Date().toISOString(),
-            uid: currentUserUID,
-            lat, lng
-        });
-
-        // Show success and redirect
-        submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submitted Successfully!';
-        submitBtn.style.background = "var(--secondary)";
-        
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1500);
-
-    } catch (err) {
-        alert("Report Submission Failed: " + err.message);
-        submitBtn.innerHTML = originalBtnHtml;
-        submitBtn.disabled = false;
-    }
+        await supabase.from('issues').insert([{
+            reporter_id: (await supabase.auth.getUser()).data.user.id,
+            category: document.getElementById("issueCategory").value,
+            description: document.getElementById("issueDescription").value,
+            location_text: document.getElementById("loc_street1").value,
+            before_image_url: publicUrl,
+            status: 'pending'
+        }]);
+        window.location.href = 'index.html';
+    } catch (err) { alert(err.message); submitBtn.disabled = false; }
 }
 
 async function handleAdminSubmit(e) {
     e.preventDefault();
-    const submitBtn = document.getElementById("btnAdminSubmit");
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
-    submitBtn.disabled = true;
-
-    try {
-        const file = document.getElementById("adminFile").files[0];
-        const fileRef = storage.ref(`resolution/${Date.now()}_${file.name}`);
-        const uploadTask = await fileRef.put(file);
-        const imageUrl = await uploadTask.ref.getDownloadURL();
-
-        await db.collection("issues").doc(issueToResolve).update({
-            afterImg: imageUrl,
-            status: "Review"
-        });
-
-        hideModal("adminModal");
-        e.target.reset();
-    } catch (err) {
-        alert("Failure: " + err.message);
-    } finally {
-        submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload Fix Proof';
-        submitBtn.disabled = false;
-    }
+    const file = document.getElementById("adminFile").files[0];
+    const fileName = `${Date.now()}_${file.name}`;
+    await supabase.storage.from('issue-images').upload(`after/${fileName}`, file);
+    const { data: { publicUrl } } = supabase.storage.from('issue-images').getPublicUrl(`after/${fileName}`);
+    await supabase.from('issues').update({ after_image_url: publicUrl, status: 'review' }).eq('id', issueToResolve);
+    hideModal("adminModal");
+    listenToIssues();
 }
 
+async function markInProgress(id) { await supabase.from('issues').update({ status: 'in_progress' }).eq('id', id); listenToIssues(); }
+async function verifyFix(id, ok) { await supabase.from('issues').update({ status: ok ? 'resolved' : 'pending' }).eq('id', id); listenToIssues(); }
+
 /*************************************************
- * 6. RENDERING LOGIC
+ * 6. UI RENDERING
  *************************************************/
 function renderIssues() {
     const grid = document.getElementById("issuesGrid");
     if(!grid) return;
     grid.innerHTML = "";
-
-    let filtered = dbIssues;
-
-    const queryEl = document.getElementById("searchInput");
-    const query = queryEl ? queryEl.value.toLowerCase() : "";
-    if (query) {
-        filtered = filtered.filter(i =>
-            i.description.toLowerCase().includes(query) ||
-            i.location.toLowerCase().includes(query) ||
-            i.category.toLowerCase().includes(query)
-        );
-    }
-
-    const catFilter = document.getElementById("categoryFilter");
-    const cat = catFilter ? catFilter.value : "All";
-    if (cat !== "All") filtered = filtered.filter(i => i.category === cat);
-
-    const statFilter = document.getElementById("statusFilter");
-    const stat = statFilter ? statFilter.value : "All";
-    if (stat !== "All") filtered = filtered.filter(i => i.status === stat);
-
-    const sortFilter = document.getElementById("sortFilter");
-    const sort = sortFilter ? sortFilter.value : "priority";
-    if (sort === "priority") filtered.sort((a, b) => (b.votes || 0) - (a.votes || 0));
-    else filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    const maxVotes = Math.max(...dbIssues.map(i => i.votes || 0), 0);
-
-    filtered.forEach(issue => {
-        const priorityInfo = getPriority(issue.votes || 0);
-        const isCritical = (issue.votes || 0) === maxVotes && (issue.votes || 0) > 0;
+    dbIssues.forEach(issue => {
         const card = document.createElement("div");
-        card.className = `issue-card ${priorityInfo.level === 'High' ? 'priority-high' : ''}`;
-
-        let statusClass = "status-pending";
-        if (issue.status === "In Progress") statusClass = "status-progress";
-        if (issue.status === "Review") statusClass = "status-review";
-        if (issue.status === "Resolved") statusClass = "status-resolved";
-        if (issue.status === "Reopened") statusClass = "status-reopened";
-
-        const iconClass = categoryIcons[issue.category] || "fa-triangle-exclamation";
-
+        card.className = "issue-card";
         card.innerHTML = `
-            <div class="card-image-wrap">
-                <img src="${issue.beforeImg}" alt="Issue" class="card-image">
-                <span class="top-badge"><i class="fa-regular fa-clock"></i> ${timeAgo(issue.timestamp)}</span>
-                ${isCritical ? '<span class="top-badge critical-badge">🔥 MOST CRITICAL</span>' : ''}
-                <span class="status-badge ${statusClass}">${issue.status}</span>
-            </div>
+            <div class="card-image-wrap"><img src="${issue.beforeImg}" class="card-image"></div>
             <div class="card-content">
-                <div class="card-meta">
-                    <span class="category-text"><i class="fa-solid ${iconClass}"></i> ${issue.category}</span>
-                    <span class="priority-tag ${priorityInfo.level}">${priorityInfo.badge}</span>
-                </div>
-                <div class="card-location"><i class="fa-solid fa-location-dot"></i> ${issue.location}</div>
+                <div class="category-text">${issue.category}</div>
+                <div class="card-location">${issue.location}</div>
                 <p class="card-desc">${issue.description}</p>
-                
                 <div class="card-footer">
-                    <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event)">
-                        <i class="fa-solid fa-arrow-up"></i> ${issue.votes || 0}
-                    </button>
-                    <button class="btn btn-outline" onclick="openDetails('${issue.id}')">View Details</button>
+                    <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event)"><i class="fa-solid fa-arrow-up"></i> ${issue.votes}</button>
+                    <button class="btn btn-outline" onclick="openDetails('${issue.id}')">Details</button>
                 </div>
             </div>
         `;
         grid.appendChild(card);
     });
-
-    updateMap(filtered);
-    updateInsights();
+    updateMap(dbIssues);
 }
 
-/*************************************************
- * 7. MAP & MODAL UI
- *************************************************/
 function initMap() {
-    const mapEl = document.getElementById('map');
-    if(!mapEl || mapInitialized) return;
-    leafletMap = L.map('map').setView([11.2588, 75.7804], 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(leafletMap);
+    const el = document.getElementById('map');
+    if(!el || mapInitialized) return;
+    leafletMap = L.map('map').setView([11.25, 75.77], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap);
     mapInitialized = true;
 }
 
-function updateMap(filteredList) {
-    if (!leafletMap) return;
+function updateMap(list) {
+    if(!leafletMap) return;
     currentMarkers.forEach(m => leafletMap.removeLayer(m));
-    currentMarkers = [];
-
-    filteredList.forEach(issue => {
-        if (issue.lat && issue.lng) {
-            let color = "#F59E0B";
-            if (issue.status === "In Progress") color = "#3B82F6";
-            if (issue.status === "Review") color = "#8B5CF6";
-            if (issue.status === "Resolved") color = "#10B981";
-
-            const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`;
-            const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
-            const marker = L.marker([issue.lat, issue.lng], { icon }).addTo(leafletMap);
-            marker.on('click', () => openDetails(issue.id));
-            currentMarkers.push(marker);
+    list.forEach(i => {
+        if(i.lat && i.lng) {
+            const m = L.marker([i.lat, i.lng]).addTo(leafletMap).on('click', () => openDetails(i.id));
+            currentMarkers.push(m);
         }
     });
-}
-
-function updateInsights() {
-    const stEl = document.getElementById("statTotal");
-    if(stEl) stEl.innerText = dbIssues.length;
-    
-    const catFreq = {};
-    let maxCat = "-", maxCount = 0;
-    dbIssues.forEach(i => {
-        catFreq[i.category] = (catFreq[i.category] || 0) + 1;
-        if (catFreq[i.category] > maxCount) {
-            maxCount = catFreq[i.category];
-            maxCat = i.category;
-        }
-    });
-    const stCatEl = document.getElementById("statCommonCategory");
-    if(stCatEl) stCatEl.innerText = maxCat;
-
-    const highestVoted = dbIssues.reduce((prev, current) => ((prev.votes || 0) > (current.votes || 0)) ? prev : current, { votes: -1 });
-    const stCritEl = document.getElementById("statCritical");
-    if(stCritEl) stCritEl.innerText = highestVoted.votes > -1 ? (highestVoted.location || "-").split(',')[0] : "-";
 }
 
 function openDetails(id) {
     const issue = dbIssues.find(i => i.id === id);
-    if (!issue) return;
-
-    const priorityInfo = getPriority(issue.votes || 0);
-    let statusClass = "status-pending";
-    if (issue.status === "In Progress") statusClass = "status-progress";
-    if (issue.status === "Review") statusClass = "status-review";
-    if (issue.status === "Resolved") statusClass = "status-resolved";
-    if (issue.status === "Reopened") statusClass = "status-reopened";
-
-    let actionButtons = '';
-    if (currentRole === "admin") {
-        if (issue.status === "Pending" || issue.status === "Reopened") {
-            actionButtons = `<button class="btn btn-primary" onclick="markInProgress('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-hammer"></i> Pick Up Issue</button>`;
-        } else if (issue.status === "In Progress") {
-            actionButtons = `<button class="btn btn-success" onclick="openAdminModal('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-camera"></i> Provide Fix Proof</button>`;
-        }
-    } else {
-        if (issue.status === "Review") {
-            actionButtons = `
-                <button class="btn btn-danger" onclick="verifyFix('${issue.id}', false)"><i class="fa-solid fa-xmark"></i> Reject</button>
-                <button class="btn btn-success" onclick="verifyFix('${issue.id}', true)"><i class="fa-solid fa-check"></i> Confirm Fix</button>
-            `;
-        }
+    if(!issue) return;
+    issueToResolve = id;
+    let actions = '';
+    if(currentRole === 'admin') {
+        if(issue.status === 'Pending') actions = `<button class="btn btn-primary" onclick="markInProgress('${id}')">Pick Up</button>`;
+        else if(issue.status === 'In Progress') actions = `<button class="btn btn-success" onclick="showModal('adminModal')">Resolve</button>`;
+    } else if(issue.status === 'Review') {
+        actions = `<button class="btn btn-success" onclick="verifyFix('${id}', true)">Confirm</button> <button class="btn btn-danger" onclick="verifyFix('${id}', false)">Reject</button>`;
     }
-
-    const html = `
-        <div class="details-header">
-            <div>
-                <h2>${issue.category}</h2>
-                <div style="font-size: 1rem; color: var(--text-main); margin-bottom: 1rem;"><i class="fa-solid fa-location-dot"></i> ${issue.locationDetail ? `${issue.locationDetail.street1}, ${issue.locationDetail.city}, ${issue.locationDetail.zip}` : issue.location}</div>
-                <div class="details-badges">
-                    <span class="badge ${statusClass}">${issue.status === "Review" ? "Needs Verification" : issue.status}</span>
-                    <span class="badge" style="background:#4F46E5;"><i class="fa-regular fa-clock"></i> ${timeAgo(issue.timestamp)}</span>
-                    <span class="badge" style="background:transparent; border:1px solid #E2E8F0; color:#0F172A;"><i class="fa-solid fa-fire" style="color:#EF4444;"></i> ${priorityInfo.level} Priority</span>
-                </div>
-            </div>
-            <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event); hideModal('detailsModal'); setTimeout(()=>openDetails('${issue.id}'),200)">
-                <i class="fa-solid fa-arrow-up"></i> ${issue.votes || 0}
-            </button>
-        </div>
-        <p style="font-size: 1.125rem; color: #475569; margin-bottom: 2rem;">${issue.description}</p>
-        <div class="media-comparison">
-            <div class="media-side"><h4>Problem Reported</h4><img src="${issue.beforeImg}"></div>
-            ${issue.proofImg ? `<div class="media-side"><h4>Address Proof</h4><img src="${issue.proofImg}"></div>` : ''}
-            ${issue.afterImg ? `<div class="media-side"><h4>Resolution Proof</h4><img src="${issue.afterImg}"></div>` : ''}
-        </div>
-        <div class="details-actions">${actionButtons || '<span style="color:#64748B;">No actions available.</span>'}</div>
-    `;
-    document.getElementById("detailsModalBody").innerHTML = html;
+    document.getElementById("detailsModalBody").innerHTML = `<h3>${issue.category}</h3><p>${issue.description}</p><div>${actions}</div>`;
     showModal("detailsModal");
 }
 
 function showModal(id) { document.getElementById(id).style.display = "flex"; }
 function hideModal(id) { document.getElementById(id).style.display = "none"; }
-function markInProgress(id) { db.collection("issues").doc(id).update({ status: "In Progress" }); }
-function verifyFix(id, isConfirmed) { db.collection("issues").doc(id).update({ status: isConfirmed ? "Resolved" : "Reopened" }); hideModal("detailsModal"); }
-function openAdminModal(id) { issueToResolve = id; showModal("adminModal"); }
-
-/*************************************************
- * 8. AUTHENTICATION (Login / Register)
- *************************************************/
-async function loginUser(type) {
-    const errorDiv = document.getElementById(type === 'citizen' ? "citError" : "admError");
-    if(errorDiv) errorDiv.style.display = "none";
-    
-    const email = document.getElementById(type === 'citizen' ? "citEmail" : "admEmail").value.trim();
-    const password = document.getElementById(type === 'citizen' ? "citPassword" : "admPassword").value;
-    
-    if (!email || !password) {
-        if(errorDiv) { errorDiv.innerText = "Please fill in all credentials."; errorDiv.style.display = "block"; }
-        return;
-    }
-    
-    try {
-        await auth.signInWithEmailAndPassword(email, password);
-        window.location.href = "index.html";
-    } catch (err) {
-        if(errorDiv) { errorDiv.innerText = err.message; errorDiv.style.display = "block"; }
-    }
-}
-
-async function registerUser(type) {
-    const errorDiv = document.getElementById(type === 'citizen' ? "citError" : "admError");
-    if(errorDiv) errorDiv.style.display = "none";
-    
-    let email, password, name, phone, ward;
-    
-    if (type === 'citizen') {
-        email = document.getElementById("regEmail").value.trim();
-        password = document.getElementById("regPassword").value;
-        name = document.getElementById("regName").value.trim();
-        phone = document.getElementById("regPhone").value.trim();
-        ward = document.getElementById("regWard").value.trim();
-    } else {
-        email = document.getElementById("admRegEmail").value.trim();
-        password = document.getElementById("admRegPassword").value;
-        name = document.getElementById("admRegName").value.trim();
-        phone = ""; 
-        ward = document.getElementById("admRegDept").value.trim(); // Mapping Dept to Ward for simplicity in users collection
-    }
-    
-    if (!email || !password || !name || !ward) {
-        if(errorDiv) { errorDiv.innerText = "Please fill in all required fields."; errorDiv.style.display = "block"; }
-        return;
-    }
-
-    try {
-        const { user } = await auth.createUserWithEmailAndPassword(email, password);
-        const role = type;
-        await db.collection("users").doc(user.uid).set({ role, name, phone, ward });
-        window.location.href = "index.html";
-    } catch (err) {
-        if(errorDiv) { errorDiv.innerText = err.message; errorDiv.style.display = "block"; }
-    }
-}
 
 async function saveProfile() {
-    if (!currentUserUID) return;
-    const name = document.getElementById("profName").value.trim();
-    const phone = document.getElementById("profPhone").value.trim();
-    const ward = document.getElementById("profWard").value.trim();
-    
-    try {
-        await db.collection("users").doc(currentUserUID).set({ name, phone, ward }, { merge: true });
-        const success = document.getElementById("profSuccess");
-        if(success) {
-            success.style.display = "block";
-            setTimeout(() => { success.style.display = "none"; }, 3000);
-        }
-        // Update local UI
-        const navUserNameEl = document.getElementById("navUserName");
-        if(navUserNameEl) navUserNameEl.innerText = name;
-        const profileNameEl = document.getElementById("profileName");
-        if(profileNameEl) profileNameEl.innerText = name;
-    } catch (err) {
-        alert("Failed to update profile: " + err.message);
-    }
+    const user = (await supabase.auth.getUser()).data.user;
+    await supabase.from('profiles').upsert({
+        user_id: user.id,
+        full_name: document.getElementById("profName").value,
+        phone: document.getElementById("profPhone").value,
+        ward: document.getElementById("profWard").value
+    });
+    alert("Profile Saved!");
 }
 
 function saveSettings() {
-    const theme = document.getElementById("themeSelect").value;
-    const lang = document.getElementById("langSelect").value;
-    
-    localStorage.setItem("fixmyarea_theme", theme);
-    localStorage.setItem("fixmyarea_lang", lang);
-    
-    applyTheme(theme);
-    applyLanguage(lang);
-    
-    const toast = document.getElementById("settingsToast");
-    if(toast) {
-        toast.style.display = "block";
-        setTimeout(() => { toast.style.display = "none"; }, 3000);
-    }
+    localStorage.setItem("fixmyarea_theme", document.getElementById("themeSelect").value);
+    localStorage.setItem("fixmyarea_lang", document.getElementById("langSelect").value);
+    location.reload();
 }
-
-async function deleteCurrentUserAccount() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const confirm1 = confirm("⚠️ WARNING: This will permanently delete your account and all your data. This action cannot be undone.\n\nAre you sure you want to proceed?");
-    if (!confirm1) return;
-
-    const confirm2 = prompt("To confirm deletion, please type 'DELETE' (all caps) below:");
-    if (confirm2 !== "DELETE") {
-        alert("Deletion cancelled. The confirmation text did not match.");
-        return;
-    }
-
-    try {
-        // 1. Delete Firestore Data
-        await db.collection("users").doc(user.uid).delete();
-        
-        // 2. Delete Auth Account
-        await user.delete();
-        
-        // 3. Clear Local State
-        localStorage.removeItem("fixmyarea_user");
-        alert("Account successfully deleted. You will now be redirected to the home page.");
-        window.location.href = "index.html";
-    } catch (err) {
-        if (err.code === 'auth/requires-recent-login') {
-            alert("For security reasons, you must have logged in recently to delete your account. Please sign out and sign in again before trying to delete.");
-        } else {
-            alert("Error deleting account: " + err.message);
-        }
-    }
-}
-
-async function handleForgotPassword(type) {
-    const emailInput = document.getElementById(type === 'citizen' ? "citEmail" : "admEmail");
-    const email = emailInput.value.trim();
-    
-    if (!email) {
-        alert("Please enter your email address first so we can send a reset link.");
-        emailInput.focus();
-        return;
-    }
-
-    if (confirm(`Send password reset email to ${email}?`)) {
-        try {
-            await auth.sendPasswordResetEmail(email);
-            alert("Success! Please check your inbox for the password reset link.");
-        } catch (err) {
-            alert("Failed to send reset email: " + err.message);
-        }
-    }
-}
-

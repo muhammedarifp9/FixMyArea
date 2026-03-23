@@ -54,15 +54,17 @@
             <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars"></i></button>
             <a href="index.html" class="logo" style="text-decoration:none;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</a>
         </div>
-        <div class="nav-links" style="display:flex; gap:2rem;">
-            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Dashboard</a>
-            <a href="about.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">About Us</a>
-            <a href="settings.html" style="text-decoration:none; color:var(--text-main); font-weight:600;" data-auth="user">Settings</a>
-            <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Join Us</a>
-            <a href="login.html" class="btn btn-outline" style="padding:0.4rem 1.2rem; border-radius:var(--radius-md);" data-auth="guest">Sign In</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link" data-i18n="dashboard">Dashboard</a>
+            <a href="profile.html" class="nav-link active" data-auth="user" data-i18n="profile">Profile</a>
+            <a href="noti.html" class="nav-link" data-auth="user" data-i18n="latestNews">Notifications</a>
+            <a href="about.html" class="nav-link" data-i18n="about">About Us</a>
+            <a href="login.html" class="btn btn-outline" data-auth="guest">Sign In</a>
         </div>
         <div class="nav-actions" data-auth="user">
-            <button class="btn btn-outline" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+            <button onclick="window.location.href='profile.html'" class="btn btn-outline" style="border:none; padding:0.5rem;" title="Go to Profile">
+                <i class="fa-solid fa-user-circle fa-2x" style="color:var(--text-muted);"></i>
+            </button>
         </div>
     </nav>
 
@@ -105,33 +107,31 @@
         <div id="profSuccess" style="color:var(--status-resolved); font-weight:600; text-align:center; display:none; margin-top:2rem;"><i class="fa-solid fa-circle-check"></i> Profile updated successfully!</div>
     </main>
 
-    <!-- Firebase SDK Compat -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="app.js"></script>
     <script>
-        // Profile-specific initialization
         document.addEventListener("DOMContentLoaded", () => {
-            // The actual data fetching is handled via auth.onAuthStateChanged in app.js
-            // We just need to wait for it or trigger a specific update here
             const checkAuth = setInterval(async () => {
-                if (currentUserUID && auth.currentUser) {
+                if (supabase && (await supabase.auth.getSession()).data.session) {
                     clearInterval(checkAuth);
-                    const user = auth.currentUser;
-                    const doc = await db.collection("users").doc(user.uid).get();
-                    const data = doc.exists ? doc.data() : {};
+                    const user = (await supabase.auth.getUser()).data.user;
                     
-                    document.getElementById("hugeAvatar").innerText = data.role === 'admin' ? 'A' : (data.name ? data.name.charAt(0).toUpperCase() : 'C');
-                    document.getElementById("displayTitleName").innerText = data.name || "Citizen User";
-                    document.getElementById("displayRoleBadge").innerText = data.role === 'admin' ? "★ Authority Account" : "Citizen Account";
+                    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+                    const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
                     
-                    document.getElementById("profName").value = data.name || "";
+                    const role = roleData?.role || 'citizen';
+                    const name = profile?.full_name || user.email.split('@')[0];
+                    
+                    document.getElementById("hugeAvatar").innerText = name.charAt(0).toUpperCase();
+                    document.getElementById("displayTitleName").innerText = name;
+                    document.getElementById("displayRoleBadge").innerText = role.charAt(0).toUpperCase() + role.slice(1) + " Account";
+                    
+                    document.getElementById("profName").value = name;
                     document.getElementById("profEmail").value = user.email || "";
-                    document.getElementById("profPhone").value = data.phone || "";
-                    document.getElementById("profWard").value = data.ward || "";
+                    document.getElementById("profPhone").value = profile?.phone || "";
+                    document.getElementById("profWard").value = profile?.ward || "";
                 }
             }, 500);
         });

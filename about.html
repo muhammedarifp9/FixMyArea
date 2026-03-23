@@ -35,14 +35,14 @@
             <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars"></i></button>
             <a href="index.html" class="logo" style="text-decoration:none;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</a>
         </div>
-        <div class="nav-links" style="display:flex; gap:2rem;">
-            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Dashboard</a>
-            <a href="about.html" style="text-decoration:none; color:var(--primary); font-weight:700;">About Us</a>
-            <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Join Us</a>
-            <a href="login.html" class="btn btn-outline" style="padding:0.4rem 1.2rem; border-radius:var(--radius-md);" data-auth="guest">Sign In</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link" data-i18n="dashboard">Dashboard</a>
+            <a href="profile.html" class="nav-link" data-auth="user" data-i18n="profile">Profile</a>
+            <a href="noti.html" class="nav-link" data-auth="user" data-i18n="latestNews">Notifications</a>
+            <a href="about.html" class="nav-link active" data-i18n="about">About Us</a>
+            <a href="login.html" class="btn btn-outline" data-auth="guest">Sign In</a>
         </div>
         <div class="nav-actions" data-auth="user">
-            <!-- Simplified Profile dropdown -->
             <button onclick="window.location.href='profile.html'" class="btn btn-outline" style="border:none; padding:0.5rem;" title="Go to Profile">
                 <i class="fa-solid fa-user-circle fa-2x" style="color:var(--text-muted);"></i>
             </button>
@@ -84,10 +84,8 @@
 
     </main>
 
-    <!-- Firebase SDK Compat -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="app.js"></script>
 </body>

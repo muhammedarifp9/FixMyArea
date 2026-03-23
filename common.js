@@ -20,29 +20,47 @@ function initNavigation() {
     // Toggle items based on data-auth attribute
     document.querySelectorAll('[data-auth]').forEach(el => {
         const requirement = el.getAttribute('data-auth');
+        
+        let displayObj = 'block';
+        if (el.tagName === 'A') displayObj = 'inline-flex';
+        if (el.classList.contains('menu-item') || el.classList.contains('nav-actions')) displayObj = 'flex';
+        if (el.hasAttribute('data-display')) displayObj = el.getAttribute('data-display');
+
         if (requirement === 'user') {
-            el.style.display = isLogined ? 'flex' : 'none';
+            el.style.display = isLogined ? displayObj : 'none';
         } else if (requirement === 'guest') {
-            el.style.display = isLogined ? 'none' : 'flex';
+            el.style.display = isLogined ? 'none' : displayObj;
         }
     });
+
 
     // Update profile-specific elements if they exist
     const navName = document.getElementById('navUserName');
     if (navName && user) {
         navName.innerText = user.name || (user.role === 'admin' ? 'Authority' : 'Citizen');
     }
+
+    // Highlight active link
+    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    document.querySelectorAll('.nav-link').forEach(link => {
+        const linkPath = link.getAttribute('href');
+        if (linkPath === currentPath) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
 }
 
 // 3. Global Logout
 function logout() {
-    // If Firebase Auth is available, sign out there too
-    if (typeof auth !== 'undefined' && auth.signOut) {
-        auth.signOut().then(() => {
+    // Check if Supabase auth is available (from app.js)
+    if (typeof supabase !== 'undefined' && supabase.auth) {
+        supabase.auth.signOut().then(() => {
             localStorage.removeItem('fixmyarea_user');
             window.location.href = 'index.html';
         }).catch(err => {
-            console.error("Signout error:", err);
+            console.error("Supabase signout error:", err);
             localStorage.removeItem('fixmyarea_user');
             window.location.href = 'index.html';
         });
