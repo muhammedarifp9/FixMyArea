@@ -94,9 +94,12 @@
                 <label>Kozhikode Ward / Local Area</label>
                 <input type="text" id="profWard">
             </div>
-            <div style="grid-column: span 2; display:flex; justify-content:flex-end; margin-top:1rem; gap:1rem;">
-                <a href="index.html" class="btn btn-outline" style="padding: 0.85rem 2rem;">Cancel</a>
-                <button type="button" class="btn btn-primary" onclick="saveProfile()" style="padding: 0.85rem 2rem;"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+            <div style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center; margin-top:2rem; padding-top:2rem; border-top:1px solid var(--border-light);">
+                <button type="button" class="btn btn-outline" onclick="deleteCurrentUserAccount()" style="color:var(--status-reopened); border-color:var(--status-reopened);"><i class="fa-solid fa-user-slash"></i> Delete Account</button>
+                <div style="display:flex; gap:1rem;">
+                    <a href="index.html" class="btn btn-outline" style="padding: 0.85rem 2rem;">Cancel</a>
+                    <button type="button" class="btn btn-primary" onclick="saveProfile()" style="padding: 0.85rem 2rem;"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+                </div>
             </div>
         </form>
         <div id="profSuccess" style="color:var(--status-resolved); font-weight:600; text-align:center; display:none; margin-top:2rem;"><i class="fa-solid fa-circle-check"></i> Profile updated successfully!</div>

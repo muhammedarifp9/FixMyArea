@@ -4,3 +4,5 @@ node_modules/
 firebase.json
 .DS_Store
 *.log
+
+.vercel

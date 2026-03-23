@@ -845,6 +845,39 @@ function saveSettings() {
     }
 }
 
+async function deleteCurrentUserAccount() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const confirm1 = confirm("⚠️ WARNING: This will permanently delete your account and all your data. This action cannot be undone.\n\nAre you sure you want to proceed?");
+    if (!confirm1) return;
+
+    const confirm2 = prompt("To confirm deletion, please type 'DELETE' (all caps) below:");
+    if (confirm2 !== "DELETE") {
+        alert("Deletion cancelled. The confirmation text did not match.");
+        return;
+    }
+
+    try {
+        // 1. Delete Firestore Data
+        await db.collection("users").doc(user.uid).delete();
+        
+        // 2. Delete Auth Account
+        await user.delete();
+        
+        // 3. Clear Local State
+        localStorage.removeItem("fixmyarea_user");
+        alert("Account successfully deleted. You will now be redirected to the home page.");
+        window.location.href = "index.html";
+    } catch (err) {
+        if (err.code === 'auth/requires-recent-login') {
+            alert("For security reasons, you must have logged in recently to delete your account. Please sign out and sign in again before trying to delete.");
+        } else {
+            alert("Error deleting account: " + err.message);
+        }
+    }
+}
+
 async function handleForgotPassword(type) {
     const emailInput = document.getElementById(type === 'citizen' ? "citEmail" : "admEmail");
     const email = emailInput.value.trim();
