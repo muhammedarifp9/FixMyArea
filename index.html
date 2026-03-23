@@ -11,28 +11,44 @@
     <!-- Leaflet mapping library -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Firebase SDK Compat libraries for Vanilla JS -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Setup Warning Modal (Shown if Firebase isn't configured) -->
+    <div id="firebaseWarning" class="modal" style="display:none; z-index:9999;">
+        <div class="modal-content" style="text-align: center;">
+            <i class="fa-solid fa-triangle-exclamation fa-3x" style="color:#F59E0B; margin-bottom:1rem;"></i>
+            <h2>Firebase Not Configured</h2>
+            <p>You must paste your <br><code>firebaseConfig</code><br> into <b>app.js</b> to securely power the login and image uploads.</p>
+        </div>
+    </div>
+
     <!-- Login Overlay -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
             <div class="login-logo"><i class="fa-solid fa-map-location-dot"></i> FixMyArea Kozhikode</div>
-            <p class="login-subtitle">Please select your portal to continue.</p>
+            <p class="login-subtitle">Secure Login Portal</p>
             
-            <div class="login-options">
-                <button class="login-btn citizen-btn" onclick="loginAs('citizen')">
-                    <i class="fa-solid fa-users fa-2x"></i>
-                    <span>Citizen Portal</span>
-                    <small>Report issues and verify fixes</small>
-                </button>
-                <button class="login-btn admin-btn" onclick="loginAs('admin')">
-                    <i class="fa-solid fa-building-shield fa-2x"></i>
-                    <span>Authority Portal</span>
-                    <small>Manage and resolve issues</small>
-                </button>
-            </div>
+            <form id="authForm" style="text-align: left;">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="authEmail" required placeholder="name@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="authPassword" required placeholder="••••••••">
+                </div>
+                <!-- By default, Firebase creates typical accounts. We will assume Authority accounts are manually created in the DB, but users can register here. -->
+                <button type="submit" class="btn btn-primary btn-block" style="margin-bottom: 1rem;"><i class="fa-solid fa-right-to-bracket"></i> Login / Register</button>
+                <div id="authError" style="color:red; font-size:0.875rem; text-align:center; display:none;"></div>
+            </form>
         </div>
     </div>
 
@@ -119,7 +135,7 @@
             <!-- Loading Spinner -->
             <div id="loadingSpinner" class="spinner-container" style="display: none;">
                 <div class="spinner"></div>
-                <p>Loading real-time data...</p>
+                <p>Connecting to Firebase Datastore...</p>
             </div>
 
             <div id="issuesGrid" class="issues-grid">
@@ -134,6 +150,11 @@
             <span class="close" id="closeReport">&times;</span>
             <h2>Report a New Issue in Kozhikode</h2>
             <form id="reportForm">
+                <div class="form-group">
+                    <label>Upload 'Before' Image</label>
+                    <!-- Authentic File Upload -->
+                    <input type="file" id="issueFile" accept="image/png, image/jpeg, image/webp" required>
+                </div>
                 <div class="form-group">
                     <label>Category</label>
                     <select id="issueCategory" required>
@@ -153,8 +174,7 @@
                     <label>Description</label>
                     <textarea id="issueDescription" rows="4" placeholder="Describe the issue in detail..." required></textarea>
                 </div>
-                <!-- Hackathon simplification: We auto-assign a random image based on category in JS -->
-                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-paper-plane"></i> Submit Report</button>
+                <button type="submit" id="btnReportSubmit" class="btn btn-primary btn-block"><i class="fa-solid fa-cloud-arrow-up"></i> Upload & Submit Report</button>
             </form>
         </div>
     </div>
@@ -166,7 +186,11 @@
             <h2>Submit Resolution Proof</h2>
             <p>Upload a photo proving the issue has been fixed.</p>
             <form id="adminForm">
-                <button type="submit" class="btn btn-success btn-block"><i class="fa-solid fa-upload"></i> Submit for Community Verification</button>
+                <div class="form-group">
+                    <label>Upload 'After' Validation Image</label>
+                    <input type="file" id="adminFile" accept="image/png, image/jpeg, image/webp" required>
+                </div>
+                <button type="submit" id="btnAdminSubmit" class="btn btn-success btn-block"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Fix Proof</button>
             </form>
         </div>
     </div>

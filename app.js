@@ -1,5 +1,48 @@
-// TimeAgo Helper
+/*************************************************
+ * 1. FIREBASE CONFIGURATION
+ *************************************************/
+// TODO: Replace this empty object with your project configuration from console.firebase.google.com
+const firebaseConfig = {
+    apiKey: "AIzaSyBmCi3y9OwTsMNGLaiOSOTjX3L3wNqUJ0Y",
+    authDomain: "fixmyarea10.firebaseapp.com",
+    projectId: "fixmyarea10",
+    storageBucket: "fixmyarea10.firebasestorage.app",
+    messagingSenderId: "659265017360",
+    appId: "1:659265017360:web:30d21eb2cbdc5366f95c95",
+    measurementId: "G-C662JRQXY9"
+};
+
+// Initialize Firebase only if the user has provided the API Key
+let app, auth, db, storage;
+if (firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
+    app = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    storage = firebase.storage();
+}
+
+/*************************************************
+ * 2. GLOBAL STATE & HELPERS
+ *************************************************/
+let currentRole = null;
+let currentUserUID = null;
+let dbIssues = []; // Realtime mirror of Firestore
+let issueToResolve = null;
+let leafletMap = null;
+let currentMarkers = [];
+let mapInitialized = false;
+
+// Map helper icons
+const categoryIcons = {
+    "Roads": "fa-road",
+    "Waste": "fa-trash",
+    "Drainage": "fa-water",
+    "Utilities": "fa-lightbulb",
+    "Toilets": "fa-restroom"
+};
+
 function timeAgo(dateString) {
+    if (!dateString) return "Just now";
     const date = new Date(dateString);
     const seconds = Math.floor((new Date() - date) / 1000);
     let interval = seconds / 31536000;
@@ -15,201 +58,257 @@ function timeAgo(dateString) {
     return Math.floor(seconds) + " seconds ago";
 }
 
-// Map helper icons
-const categoryIcons = {
-    "Roads": "fa-road",
-    "Waste": "fa-trash",
-    "Drainage": "fa-water",
-    "Utilities": "fa-lightbulb",
-    "Toilets": "fa-restroom"
-};
-
-// Hackathon Mock Data for Kozhikode
-let issues = [
-    {
-        id: 1,
-        category: "Roads",
-        location: "SM Street",
-        description: "Large pothole causing traffic slowdowns and potential damage.",
-        beforeImg: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400",
-        afterImg: null,
-        status: "Pending",
-        votes: 14,
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours
-        lat: 11.2514,
-        lng: 75.7802
-    },
-    {
-        id: 2,
-        category: "Waste",
-        location: "Kozhikode Beach",
-        description: "Overflowing garbage bins near the beach walkway not cleared for 3 days.",
-        beforeImg: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=400",
-        afterImg: null,
-        status: "In Progress",
-        votes: 8,
-        timestamp: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 day
-        lat: 11.2618,
-        lng: 75.7667
-    },
-    {
-        id: 3,
-        category: "Utilities",
-        location: "Mananchira Square",
-        description: "Street light flickering constantly, makes the park very dark at night.",
-        beforeImg: "https://images.unsplash.com/photo-1494541707248-be08cbde51a9?auto=format&fit=crop&q=80&w=400",
-        afterImg: "https://images.unsplash.com/photo-1498612753354-772a3068e64c?auto=format&fit=crop&q=80&w=400",
-        status: "Review",
-        votes: 38, // High priority
-        timestamp: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days
-        lat: 11.2554,
-        lng: 75.7766
-    },
-    {
-        id: 4,
-        category: "Drainage",
-        location: "Mavoor Road",
-        description: "Severe water logging after recent rains. Drainage is clogged.",
-        beforeImg: "https://images.unsplash.com/photo-1584812301548-7323861fb16e?auto=format&fit=crop&q=80&w=400",
-        afterImg: null,
-        status: "Pending",
-        votes: 4, // Low priority
-        timestamp: new Date(Date.now() - 3600000 * 5).toISOString(), // 5 hours
-        lat: 11.2582,
-        lng: 75.7850
-    },
-    {
-        id: 5,
-        category: "Toilets",
-        location: "Thondayad Bypass",
-        description: "Public toilet door broken and no running water.",
-        beforeImg: "https://images.unsplash.com/photo-1620306138139-4ad3c14d2ba7?auto=format&fit=crop&q=80&w=400",
-        afterImg: "https://images.unsplash.com/photo-1584812301548-7323861fb16e?auto=format&fit=crop&q=80&w=400",
-        status: "Resolved",
-        votes: 12,
-        timestamp: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days
-        lat: 11.2680,
-        lng: 75.8078
-    }
-];
-
-// Global State
-let currentRole = null; // null until logged in. "citizen" | "admin"
-let issueToResolve = null;
-let leafletMap = null;
-let currentMarkers = [];
-let mapInitialized = false;
-
-// Init
-document.addEventListener("DOMContentLoaded", () => {
-    // The login overlay covers everything initially
-    document.getElementById("loginOverlay").style.display = "flex";
-    document.getElementById("appContainer").style.display = "none";
-    
-    setupEventListeners();
-});
-
-// Authentication Handlers
-function loginAs(role) {
-    currentRole = role;
-    document.getElementById("loginOverlay").style.display = "none";
-    document.getElementById("appContainer").style.display = "block";
-    
-    // UI Updates based on Role
-    document.getElementById("profileName").innerHTML = currentRole === "admin" ? 
-        '<i class="fa-solid fa-shield-halved" style="color:var(--primary);"></i> Authority Portal' : 
-        '<i class="fa-solid fa-user" style="color:var(--primary);"></i> Citizen Portal';
-    
-    document.getElementById("btnOpenReport").style.display = currentRole === "admin" ? "none" : "inline-flex";
-
-    // Simulate loading for demo effect
-    document.getElementById("loadingSpinner").style.display = "block";
-    document.getElementById("issuesGrid").innerHTML = "";
-    
-    setTimeout(() => {
-        document.getElementById("loadingSpinner").style.display = "none";
-        if (!mapInitialized) {
-            initMap();
-        } else {
-            leafletMap.invalidateSize(); // Fix map render issue if container was hidden
-        }
-        renderIssues();
-    }, 500);
-}
-
-function logout() {
-    currentRole = null;
-    document.getElementById("appContainer").style.display = "none";
-    document.getElementById("loginOverlay").style.display = "flex";
-}
-
-// Setup Listeners
-function setupEventListeners() {
-    document.getElementById("btnOpenReport").addEventListener("click", () => showModal("reportModal"));
-    
-    document.querySelectorAll(".close").forEach(btn => {
-        btn.addEventListener("click", (e) => hideModal(e.target.closest(".modal").id));
-    });
-
-    // Filters
-    document.getElementById("searchInput").addEventListener("input", renderIssues);
-    document.getElementById("categoryFilter").addEventListener("change", renderIssues);
-    document.getElementById("statusFilter").addEventListener("change", renderIssues);
-    document.getElementById("sortFilter").addEventListener("change", renderIssues);
-
-    // Forms
-    document.getElementById("reportForm").addEventListener("submit", handleReportSubmit);
-    document.getElementById("adminForm").addEventListener("submit", handleAdminSubmit);
-}
-
-// Modal Helpers
-function showModal(id) { document.getElementById(id).classList.add("active"); }
-function hideModal(id) { document.getElementById(id).classList.remove("active"); }
-
-// Priorities
 function getPriority(votes) {
     if (votes > 10) return { level: "High", badge: "🔥 High" };
     if (votes >= 5) return { level: "Medium", badge: "⚡ Med" };
     return { level: "Low", badge: "🧊 Low" };
 }
 
-// Render
+/*************************************************
+ * 3. INITIALIZATION & LISTENERS
+ *************************************************/
+document.addEventListener("DOMContentLoaded", () => {
+    if (!app) {
+        document.getElementById("firebaseWarning").style.display = "flex";
+        return;
+    }
+
+    // Standard DOM Listeners
+    setupEventListeners();
+
+    // Listen to Firebase Auth State (Persists login across reloads)
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            handleSuccessfulLogin(user);
+        } else {
+            document.getElementById("loginOverlay").style.display = "flex";
+            document.getElementById("appContainer").style.display = "none";
+        }
+    });
+});
+
+function setupEventListeners() {
+    // Auth
+    document.getElementById("authForm").addEventListener("submit", handleAuthSubmit);
+
+    // Modals
+    document.getElementById("btnOpenReport").addEventListener("click", () => showModal("reportModal"));
+    document.querySelectorAll(".close").forEach(btn => {
+        btn.addEventListener("click", (e) => hideModal(e.target.closest(".modal").id));
+    });
+
+    // Filtering
+    document.getElementById("searchInput").addEventListener("input", renderIssues);
+    document.getElementById("categoryFilter").addEventListener("change", renderIssues);
+    document.getElementById("statusFilter").addEventListener("change", renderIssues);
+    document.getElementById("sortFilter").addEventListener("change", renderIssues);
+
+    // Form Submissions
+    document.getElementById("reportForm").addEventListener("submit", handleReportSubmit);
+    document.getElementById("adminForm").addEventListener("submit", handleAdminSubmit);
+}
+
+/*************************************************
+ * 4. AUTHENTICATION (Login / Logout)
+ *************************************************/
+async function handleAuthSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById("authEmail").value;
+    const password = document.getElementById("authPassword").value;
+    const errorDiv = document.getElementById("authError");
+
+    errorDiv.style.display = "none";
+    try {
+        // Attempt to log in. If account doesn't exist, create it.
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (signInErr) {
+            if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
+                await auth.createUserWithEmailAndPassword(email, password);
+            } else {
+                throw signInErr;
+            }
+        }
+    } catch (err) {
+        errorDiv.innerText = err.message;
+        errorDiv.style.display = "block";
+    }
+}
+
+function handleSuccessfulLogin(user) {
+    currentUserUID = user.uid;
+    // For the hackathon, hardcode anyone with 'admin@fixmyarea.com' as an authority. All others are citizens.
+    currentRole = (user.email === "admin@fixmyarea.com" || user.email.includes("admin")) ? "admin" : "citizen";
+
+    document.getElementById("loginOverlay").style.display = "none";
+    document.getElementById("appContainer").style.display = "block";
+
+    document.getElementById("profileName").innerHTML = currentRole === "admin" ?
+        '<i class="fa-solid fa-shield-halved" style="color:var(--primary);"></i> Authority Portal' :
+        '<i class="fa-solid fa-user" style="color:var(--primary);"></i> Citizen Portal';
+
+    document.getElementById("btnOpenReport").style.display = currentRole === "admin" ? "none" : "inline-flex";
+
+    if (!mapInitialized) initMap();
+    else leafletMap.invalidateSize();
+
+    // Start Realtime Firestore Listener
+    listenToIssues();
+}
+
+function logout() {
+    auth.signOut();
+}
+
+/*************************************************
+ * 5. DATABASE OPERATIONS (Cloud Sync)
+ *************************************************/
+function listenToIssues() {
+    document.getElementById("loadingSpinner").style.display = "block";
+
+    db.collection("issues").onSnapshot((snapshot) => {
+        document.getElementById("loadingSpinner").style.display = "none";
+        dbIssues = [];
+        snapshot.forEach((doc) => {
+            dbIssues.push({ id: doc.id, ...doc.data() });
+        });
+        renderIssues();
+    });
+}
+
+function upvoteIssue(id, event) {
+    if (event) event.stopPropagation();
+    const issueRef = db.collection("issues").doc(id);
+    db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(issueRef);
+        if (doc.exists) {
+            transaction.update(issueRef, { votes: doc.data().votes + 1 });
+        }
+    }).catch(console.error);
+}
+
+function markInProgress(id) {
+    db.collection("issues").doc(id).update({ status: "In Progress" });
+}
+
+function verifyFix(id, isConfirmed) {
+    db.collection("issues").doc(id).update({
+        status: isConfirmed ? "Resolved" : "Reopened"
+    });
+    hideModal("detailsModal");
+}
+
+/*************************************************
+ * 6. CLOUD STORAGE (Actual File Uploads)
+ *************************************************/
+async function handleReportSubmit(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById("btnReportSubmit");
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
+    submitBtn.disabled = true;
+
+    try {
+        const file = document.getElementById("issueFile").files[0];
+        const category = document.getElementById("issueCategory").value;
+        const location = document.getElementById("issueLocation").value;
+        const description = document.getElementById("issueDescription").value;
+
+        // Upload to Firebase Storage
+        const fileRef = storage.ref(`issues/${Date.now()}_${file.name}`);
+        const uploadTask = await fileRef.put(file);
+        const imageUrl = await uploadTask.ref.getDownloadURL();
+
+        // Save metadata to Firestore
+        const lat = 11.25 + (Math.random() * 0.02); // Simulated mapping
+        const lng = 75.77 + (Math.random() * 0.02);
+
+        await db.collection("issues").add({
+            category, location, description,
+            beforeImg: imageUrl,
+            afterImg: null,
+            status: "Pending",
+            votes: 0,
+            timestamp: new Date().toISOString(),
+            uid: currentUserUID,
+            lat, lng
+        });
+
+        hideModal("reportModal");
+        e.target.reset();
+    } catch (err) {
+        alert("Upload Failed: " + err.message);
+    } finally {
+        submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload & Submit Report';
+        submitBtn.disabled = false;
+    }
+}
+
+function openAdminModal(id) {
+    issueToResolve = id;
+    showModal("adminModal");
+}
+
+async function handleAdminSubmit(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById("btnAdminSubmit");
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+    submitBtn.disabled = true;
+
+    try {
+        const file = document.getElementById("adminFile").files[0];
+        const fileRef = storage.ref(`resolution/${Date.now()}_${file.name}`);
+        const uploadTask = await fileRef.put(file);
+        const imageUrl = await uploadTask.ref.getDownloadURL();
+
+        await db.collection("issues").doc(issueToResolve).update({
+            afterImg: imageUrl,
+            status: "Review"
+        });
+
+        hideModal("adminModal");
+        e.target.reset();
+    } catch (err) {
+        alert("Failure: " + err.message);
+    } finally {
+        submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload Fix Proof';
+        submitBtn.disabled = false;
+    }
+}
+
+/*************************************************
+ * 7. RENDERING LOGIC (Updated to map dbIssues)
+ *************************************************/
 function renderIssues() {
-    if (!currentRole) return; // safety
-    
+    if (!currentRole) return;
     const grid = document.getElementById("issuesGrid");
     grid.innerHTML = "";
-    
-    let filtered = issues;
 
-    // Search Filter
+    let filtered = dbIssues;
+
     const query = document.getElementById("searchInput").value.toLowerCase();
     if (query) {
-        filtered = filtered.filter(i => 
-            i.description.toLowerCase().includes(query) || 
+        filtered = filtered.filter(i =>
+            i.description.toLowerCase().includes(query) ||
             i.location.toLowerCase().includes(query) ||
             i.category.toLowerCase().includes(query)
         );
     }
-    
-    // Category & Status
+
     const cat = document.getElementById("categoryFilter").value;
     if (cat !== "All") filtered = filtered.filter(i => i.category === cat);
-    
+
     const stat = document.getElementById("statusFilter").value;
     if (stat !== "All") filtered = filtered.filter(i => i.status === stat);
 
-    // Sort Filter
     const sort = document.getElementById("sortFilter").value;
     if (sort === "priority") filtered.sort((a, b) => b.votes - a.votes);
     else filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    const maxVotes = Math.max(...issues.map(i => i.votes));
+    const maxVotes = Math.max(...dbIssues.map(i => i.votes), 0);
 
     filtered.forEach(issue => {
         const priorityInfo = getPriority(issue.votes);
         const isCritical = issue.votes === maxVotes && issue.votes > 0;
-        
         const card = document.createElement("div");
         card.className = `issue-card ${priorityInfo.level === 'High' ? 'priority-high' : ''}`;
 
@@ -237,10 +336,10 @@ function renderIssues() {
                 <p class="card-desc">${issue.description}</p>
                 
                 <div class="card-footer">
-                    <button class="upvote-btn" onclick="upvoteIssue(${issue.id}, event)">
+                    <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event)">
                         <i class="fa-solid fa-arrow-up"></i> ${issue.votes}
                     </button>
-                    <button class="btn btn-outline" onclick="openDetails(${issue.id})">View Details</button>
+                    <button class="btn btn-outline" onclick="openDetails('${issue.id}')">View Details</button>
                 </div>
             </div>
         `;
@@ -251,42 +350,60 @@ function renderIssues() {
     updateInsights();
 }
 
-// Insights logic
+/*************************************************
+ * 8. MAP & UI LOGIC
+ *************************************************/
+function initMap() {
+    leafletMap = L.map('map').setView([11.2588, 75.7804], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(leafletMap);
+    mapInitialized = true;
+}
+
+function updateMap(filteredList) {
+    if (!leafletMap) return;
+    currentMarkers.forEach(m => leafletMap.removeLayer(m));
+    currentMarkers = [];
+
+    filteredList.forEach(issue => {
+        if (issue.lat && issue.lng) {
+            let color = "#F59E0B";
+            if (issue.status === "In Progress") color = "#3B82F6";
+            if (issue.status === "Review") color = "#8B5CF6";
+            if (issue.status === "Resolved") color = "#10B981";
+
+            const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`;
+            const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
+
+            const marker = L.marker([issue.lat, issue.lng], { icon }).addTo(leafletMap);
+            marker.on('click', () => openDetails(issue.id));
+            currentMarkers.push(marker);
+        }
+    });
+}
+
 function updateInsights() {
-    document.getElementById("statTotal").innerText = issues.length;
-    
+    document.getElementById("statTotal").innerText = dbIssues.length;
     const catFreq = {};
     let maxCat = "-", maxCount = 0;
-    issues.forEach(i => {
+    dbIssues.forEach(i => {
         catFreq[i.category] = (catFreq[i.category] || 0) + 1;
-        if(catFreq[i.category] > maxCount) {
+        if (catFreq[i.category] > maxCount) {
             maxCount = catFreq[i.category];
             maxCat = i.category;
         }
     });
     document.getElementById("statCommonCategory").innerText = maxCat;
 
-    const highestVoted = issues.reduce((prev, current) => (prev.votes > current.votes) ? prev : current, {votes: -1});
+    const highestVoted = dbIssues.reduce((prev, current) => (prev.votes > current.votes) ? prev : current, { votes: -1 });
     document.getElementById("statCritical").innerText = highestVoted.votes > -1 ? highestVoted.location.split(',')[0] : "-";
-    
-    // Recent handling correctly
-    document.getElementById("statRecent").innerText = issues.length > 0 ? timeAgo(issues[Math.max(0, issues.length-1)].timestamp) : "-";
+    document.getElementById("statRecent").innerText = dbIssues.length > 0 ? timeAgo(dbIssues[Math.max(0, dbIssues.length - 1)].timestamp) : "-";
 }
 
-// Actions
-function upvoteIssue(id, event) {
-    if(event) event.stopPropagation();
-    const issue = issues.find(i => i.id === id);
-    if(issue) {
-        issue.votes++;
-        renderIssues();
-    }
-}
-
-// Detail Modal & Verification
 function openDetails(id) {
-    const issue = issues.find(i => i.id === id);
-    if(!issue) return;
+    const issue = dbIssues.find(i => i.id === id);
+    if (!issue) return;
 
     const priorityInfo = getPriority(issue.votes);
     let statusClass = "status-pending";
@@ -295,20 +412,19 @@ function openDetails(id) {
     if (issue.status === "Resolved") statusClass = "status-resolved";
     if (issue.status === "Reopened") statusClass = "status-reopened";
 
-    const isCitizen = currentRole === "citizen";
     let actionButtons = '';
-    
+
     if (currentRole === "admin") {
         if (issue.status === "Pending" || issue.status === "Reopened") {
-            actionButtons = `<button class="btn btn-primary" onclick="markInProgress(${issue.id}); hideModal('detailsModal')"><i class="fa-solid fa-hammer"></i> Pick Up Issue (In Progress)</button>`;
+            actionButtons = `<button class="btn btn-primary" onclick="markInProgress('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-hammer"></i> Pick Up Issue (In Progress)</button>`;
         } else if (issue.status === "In Progress") {
-            actionButtons = `<button class="btn btn-success" onclick="openAdminModal(${issue.id}); hideModal('detailsModal')"><i class="fa-solid fa-camera"></i> Provide Fix Proof</button>`;
+            actionButtons = `<button class="btn btn-success" onclick="openAdminModal('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-camera"></i> Provide Fix Proof</button>`;
         }
     } else {
         if (issue.status === "Review") {
             actionButtons = `
-                <button class="btn btn-danger" onclick="verifyFix(${issue.id}, false)"><i class="fa-solid fa-xmark"></i> Reject & Reopen</button>
-                <button class="btn btn-success" onclick="verifyFix(${issue.id}, true)"><i class="fa-solid fa-check"></i> Confirm Fixed</button>
+                <button class="btn btn-danger" onclick="verifyFix('${issue.id}', false)"><i class="fa-solid fa-xmark"></i> Reject & Reopen</button>
+                <button class="btn btn-success" onclick="verifyFix('${issue.id}', true)"><i class="fa-solid fa-check"></i> Confirm Fixed</button>
             `;
         }
     }
@@ -323,7 +439,7 @@ function openDetails(id) {
                     <span class="badge" style="background:transparent; border:1px solid #E2E8F0; color:#0F172A;"><i class="fa-solid fa-fire text-red-500"></i> ${priorityInfo.level} Priority</span>
                 </div>
             </div>
-            <button class="upvote-btn" onclick="upvoteIssue(${issue.id}, event); hideModal('detailsModal'); setTimeout(()=>openDetails(${issue.id}),50)">
+            <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event); hideModal('detailsModal'); setTimeout(()=>openDetails('${issue.id}'),200)">
                 <i class="fa-solid fa-arrow-up"></i> ${issue.votes}
             </button>
         </div>
@@ -347,97 +463,7 @@ function openDetails(id) {
             ${actionButtons || '<span style="color:#64748B; font-weight:500; font-size:0.875rem;">No actions available for your role at this stage.</span>'}
         </div>
     `;
-    
+
     document.getElementById("detailsModalBody").innerHTML = html;
     showModal("detailsModal");
-}
-
-function verifyFix(id, isConfirmed) {
-    const issue = issues.find(i => i.id === id);
-    if(issue) {
-        issue.status = isConfirmed ? "Resolved" : "Reopened";
-        hideModal("detailsModal");
-        renderIssues();
-    }
-}
-
-function markInProgress(id) {
-    const issue = issues.find(i => i.id === id);
-    if(issue) issue.status = "In Progress";
-    renderIssues();
-}
-
-function openAdminModal(id) {
-    issueToResolve = id;
-    showModal("adminModal");
-}
-
-function handleAdminSubmit(e) {
-    e.preventDefault();
-    const issue = issues.find(i => i.id === issueToResolve);
-    if(issue) {
-        // Mocking resolution image for demo
-        issue.afterImg = "https://images.unsplash.com/photo-1584812301548-7323861fb16e?auto=format&fit=crop&q=80&w=400";
-        issue.status = "Review";
-        hideModal("adminModal");
-        renderIssues();
-    }
-}
-
-function handleReportSubmit(e) {
-    e.preventDefault();
-    // Simulate coordinates within Kozhikode roughly
-    const lat = 11.25 + (Math.random() * 0.02);
-    const lng = 75.77 + (Math.random() * 0.02);
-
-    const newIssue = {
-        id: Date.now(),
-        category: document.getElementById("issueCategory").value,
-        location: document.getElementById("issueLocation").value,
-        description: document.getElementById("issueDescription").value,
-        beforeImg: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400", // Sample img
-        afterImg: null,
-        status: "Pending",
-        votes: 0,
-        timestamp: new Date().toISOString(),
-        lat: lat,
-        lng: lng
-    };
-    issues.unshift(newIssue);
-    hideModal("reportModal");
-    e.target.reset();
-    renderIssues();
-}
-
-// Map Logic (Kozhikode Focus)
-function initMap() {
-    leafletMap = L.map('map').setView([11.2588, 75.7804], 14); // Kozhikode centered properly
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(leafletMap);
-    mapInitialized = true;
-}
-
-function updateMap(filteredList) {
-    if(!leafletMap) return;
-    // Clear old
-    currentMarkers.forEach(m => leafletMap.removeLayer(m));
-    currentMarkers = [];
-
-    // Add new
-    filteredList.forEach(issue => {
-        if(issue.lat && issue.lng) {
-            let color = "#F59E0B";
-            if(issue.status === "In Progress") color = "#3B82F6";
-            if(issue.status === "Review") color = "#8B5CF6";
-            if(issue.status === "Resolved") color = "#10B981";
-
-            const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`;
-            const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
-            
-            const marker = L.marker([issue.lat, issue.lng], {icon}).addTo(leafletMap);
-            marker.on('click', () => openDetails(issue.id));
-            currentMarkers.push(marker);
-        }
-    });
 }
