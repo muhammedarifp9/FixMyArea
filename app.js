@@ -142,14 +142,18 @@ async function registerCitizen() {
     errorDiv.style.display = "none";
     const email = document.getElementById("regEmail").value.trim();
     const password = document.getElementById("regPassword").value;
-    if (!email || !password) {
-        errorDiv.innerText = "Please fill in both your email and password.";
+    const name = document.getElementById("regName").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const ward = document.getElementById("regWard").value.trim();
+    
+    if (!email || !password || !name || !ward) {
+        errorDiv.innerText = "Please fill in all required fields (Name, Ward, Email, Password).";
         errorDiv.style.display = "block"; return;
     }
     try {
         const { user } = await auth.createUserWithEmailAndPassword(email, password);
         const role = (user.email.includes("admin")) ? "admin" : "citizen";
-        try { await db.collection("users").doc(user.uid).set({ role }); } catch(err) {} 
+        try { await db.collection("users").doc(user.uid).set({ role, name, phone, ward }); } catch(err) {} 
     } catch (err) {
         errorDiv.innerText = err.message;
         errorDiv.style.display = "block";
