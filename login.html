@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixMyArea - Sign In</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Instant Theme Loader to prevent FOUC -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('fixmyarea_theme');
+            if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
+    <style>
+        body {
+            background: linear-gradient(rgba(37, 99, 235, 0.2), rgba(16, 185, 129, 0.2)), url('kozhikode_beach.png') center/cover no-repeat fixed;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; margin: 0;
+        }
+        .login-card {
+            background: var(--surface); padding: 3rem; border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl); max-width: 450px; width: 100%; text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .login-logo { font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; text-decoration: none; display:block;}
+        .login-subtitle { color: var(--text-muted); margin-bottom: 2.5rem; font-size: 1.125rem; }
+        
+        .portal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+        .portal-tab {
+            flex: 1; padding: 1rem; font-weight: 600; cursor: pointer; color: var(--text-muted);
+            border-bottom: 3px solid transparent; transition: all 0.2s; font-size: 0.95rem;
+        }
+        .portal-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <!-- Slide Menu & Overlay -->
+    <div class="slide-menu-overlay" id="slideOverlay" onclick="document.getElementById('slideMenu').classList.remove('active'); this.classList.remove('active');"></div>
+    <aside class="slide-menu" id="slideMenu">
+        <button class="close-btn" onclick="document.getElementById('slideMenu').classList.remove('active'); document.getElementById('slideOverlay').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 0 2rem 2rem; border-bottom: 1px solid var(--border-light); margin-bottom: 1rem;">
+            <div class="logo" style="font-size: 1.25rem; color:var(--primary); font-weight:800;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</div>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin-top:0.5rem;">Kozhikode Civic Portal</p>
+        </div>
+        <a href="index.html" class="menu-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="profile.html" class="menu-item"><i class="fa-solid fa-user-pen"></i> My Profile</a>
+        <a href="settings.html" class="menu-item"><i class="fa-solid fa-gear"></i> App Settings</a>
+        <a href="about.html" class="menu-item"><i class="fa-solid fa-circle-info"></i> About Us</a>
+        <a href="connect.html" class="menu-item"><i class="fa-solid fa-handshake-angle"></i> Join Volunteer</a>
+    </aside>
+
+    <div style="position:absolute; top: 1.5rem; left: 1.5rem; z-index:100;">
+        <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars" style="font-size:1.75rem;"></i></button>
+    </div>
+
+    <div class="login-card">
+        <a href="index.html" class="login-logo"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</a>
+        <p class="login-subtitle">Welcome back to the platform.</p>
+
+        <div class="portal-tabs">
+            <div class="portal-tab active" onclick="switchPortal('citizen')" id="tab-citizen">Citizen</div>
+            <div class="portal-tab" onclick="switchPortal('admin')" id="tab-admin">Authority</div>
+        </div>
+
+        <!-- Citizen Form -->
+        <form id="form-citizen" style="text-align: left;" class="reveal">
+            <div class="form-group">
+                <label><i class="fa-solid fa-envelope"></i> Email Address</label>
+                <input type="email" id="citEmail" required placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-lock"></i> Password</label>
+                <input type="password" id="citPassword" required placeholder="••••••••">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="loginUser('citizen')" style="margin-top: 1rem; padding: 1rem;">
+                Sign In <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <div style="text-align:center; padding-top:2rem; margin-top: 2rem; border-top:1px solid var(--border-light);">
+                <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1.5rem;">New to the movement?</p>
+                <a href="register.html" id="btnCreateAccount" class="btn btn-outline btn-block">Create an Account</a>
+            </div>
+            <div id="citError" style="color:var(--status-pending); font-size:0.875rem; text-align:center; display:none; margin-top:1rem; font-weight: 600;"></div>
+        </form>
+
+        <!-- Admin Form -->
+        <form id="form-admin" style="text-align: left; display: none;" class="reveal">
+            <div class="form-group">
+                <label><i class="fa-solid fa-building-shield"></i> Official Email</label>
+                <input type="email" id="admEmail" required placeholder="official@fixmyarea.com">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-key"></i> Admin Password</label>
+                <input type="password" id="admPassword" required placeholder="••••••••">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="loginUser('admin')" style="margin-top: 1rem; padding: 1rem;">
+                Access Portal <i class="fa-solid fa-shield-halved"></i>
+            </button>
+            <div id="admError" style="color:var(--status-pending); font-size:0.875rem; text-align:center; display:none; margin-top:1rem; font-weight: 600;"></div>
+        </form>
+    </div>
+
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script src="app.js"></script>
+    <script>
+        function switchPortal(type) {
+            if (type === 'citizen') {
+                document.getElementById('tab-citizen').classList.add('active');
+                document.getElementById('tab-admin').classList.remove('active');
+                document.getElementById('form-citizen').style.display = 'block';
+                document.getElementById('form-admin').style.display = 'none';
+            } else {
+                document.getElementById('tab-admin').classList.add('active');
+                document.getElementById('tab-citizen').classList.remove('active');
+                document.getElementById('form-admin').style.display = 'block';
+                document.getElementById('form-citizen').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

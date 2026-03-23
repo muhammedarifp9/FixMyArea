@@ -7,11 +7,20 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Instant Theme Loader to prevent FOUC -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('fixmyarea_theme');
+            if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
     
     <!-- Leaflet mapping library -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    
     <!-- Firebase SDK Compat libraries for Vanilla JS -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -19,192 +28,258 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
     <link rel="stylesheet" href="styles.css">
+    <script src="common.js"></script>
 </head>
 <body>
-    <!-- Setup Warning Modal (Shown if Firebase isn't configured) -->
-    <div id="firebaseWarning" class="modal" style="display:none; z-index:9999;">
-        <div class="modal-content" style="text-align: center;">
-            <i class="fa-solid fa-triangle-exclamation fa-3x" style="color:#F59E0B; margin-bottom:1rem;"></i>
-            <h2>Firebase Not Configured</h2>
-            <p>You must paste your <br><code>firebaseConfig</code><br> into <b>app.js</b> to securely power the login and image uploads.</p>
+    <!-- Slide Menu & Overlay -->
+    <div class="slide-menu-overlay" id="slideOverlay" onclick="document.getElementById('slideMenu').classList.remove('active'); this.classList.remove('active');"></div>
+    <aside class="slide-menu" id="slideMenu">
+        <button class="close-btn" onclick="document.getElementById('slideMenu').classList.remove('active'); document.getElementById('slideOverlay').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 0 2rem 2rem; border-bottom: 1px solid var(--border-light); margin-bottom: 1rem;">
+            <div class="logo" style="font-size: 1.25rem; color:var(--primary); font-weight:800;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</div>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin-top:0.5rem;">Kozhikode Civic Portal</p>
         </div>
-    </div>
+        <a href="index.html" class="menu-item" style="border-left-color: var(--primary); background: var(--primary-light); color: var(--primary);" data-i18n="dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="profile.html" class="menu-item" data-auth="user" data-i18n="profile"><i class="fa-solid fa-user-pen"></i> <span id="navUserName">My Profile</span></a>
+        <a href="settings.html" class="menu-item" data-auth="user" data-i18n="settings"><i class="fa-solid fa-gear"></i> App Settings</a>
+        <a href="about.html" class="menu-item" data-i18n="about"><i class="fa-solid fa-circle-info"></i> About Us</a>
+        <a href="connect.html" class="menu-item" data-i18n="connect"><i class="fa-solid fa-handshake-angle"></i> Join Volunteer</a>
+        <a href="login.html" class="menu-item" data-auth="guest">
+            <i class="fa-solid fa-right-to-bracket" style="color:var(--primary);"></i> 
+            <span style="color:var(--primary); font-weight:700;">Sign In</span>
+        </a>
+        <a href="#" class="menu-item" data-auth="user" onclick="logout()">
+            <i class="fa-solid fa-right-from-bracket" style="color:var(--status-reopened);"></i> 
+            <span style="color:var(--status-reopened);" data-i18n="signOut">Sign Out</span>
+        </a>
+    </aside>
 
-    <!-- Login Overlay -->
-    <div id="loginOverlay" class="login-overlay">
-        <!-- View 1: Selection -->
-        <div class="login-card" id="viewSelection">
-            <div class="login-logo"><i class="fa-solid fa-map-location-dot"></i> FixMyArea Kozhikode</div>
-            <p class="login-subtitle">Please select your portal to continue.</p>
-            <div class="login-options">
-                <button class="login-btn citizen-btn" onclick="showAuthView('citizen')">
-                    <i class="fa-solid fa-users fa-2x"></i>
-                    <span>Citizen Portal</span>
-                    <small>Report issues and verify fixes</small>
-                </button>
-                <button class="login-btn admin-btn" onclick="showAuthView('admin')">
-                    <i class="fa-solid fa-building-shield fa-2x"></i>
-                    <span>Authority Portal</span>
-                    <small>Manage and resolve issues</small>
-                </button>
-            </div>
-        </div>
-        
-        <!-- View 2: Citizen -->
-        <div class="login-card" id="viewCitizen" style="display:none;">
-            <button class="btn btn-outline btn-sm" onclick="showAuthView('selection')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-            <div class="login-logo"><i class="fa-solid fa-users"></i> Citizen Login</div>
-            <form style="text-align: left;">
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="citEmail" required placeholder="citizen@example.com">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="citPassword" required placeholder="••••••••">
-                </div>
-                <button type="button" class="btn btn-primary btn-block" onclick="loginCitizen()" style="margin-bottom:1rem;"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
-                <div style="text-align:center; padding-top:1rem; border-top:1px solid var(--border-light);">
-                    <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:0.5rem;">New to FixMyArea?</p>
-                    <button type="button" class="btn btn-outline btn-block" onclick="showAuthView('register')"><i class="fa-solid fa-user-plus"></i> Create an Account</button>
-                </div>
-                <div id="citError" style="color:var(--status-pending); font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
-            </form>
-        </div>
-
-        <!-- View 4: Citizen Register -->
-        <div class="login-card" id="viewRegister" style="display:none;">
-            <button class="btn btn-outline btn-sm" onclick="showAuthView('citizen')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back to Login</button>
-            <div class="login-logo"><i class="fa-solid fa-user-plus"></i> Register</div>
-            <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem;">Join the movement today.</p>
-            <form style="text-align: left;">
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="regName" required placeholder="John Doe">
-                </div>
-                <div class="form-group">
-                    <label>Phone Number (Optional)</label>
-                    <input type="tel" id="regPhone" placeholder="+91 98765 43210">
-                </div>
-                <div class="form-group">
-                    <label>Kozhikode Ward / Area</label>
-                    <input type="text" id="regWard" required placeholder="e.g. Ward 12 / Medical College">
-                </div>
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="regEmail" required placeholder="name@example.com">
-                </div>
-                <div class="form-group">
-                    <label>Create Password</label>
-                    <input type="password" id="regPassword" required placeholder="At least 6 characters">
-                </div>
-                <button type="button" class="btn btn-primary btn-block" onclick="registerCitizen()"><i class="fa-solid fa-check"></i> Register Now</button>
-                <div id="regError" style="color:var(--status-pending); font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
-            </form>
-        </div>
-
-        <!-- View 3: Authority -->
-        <div class="login-card" id="viewAdmin" style="display:none;">
-            <button class="btn btn-outline btn-sm" onclick="showAuthView('selection')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back</button>
-            <div class="login-logo"><i class="fa-solid fa-building-shield"></i> Authority Portal</div>
-            <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem;">Secure access for Kozhikode city officials.</p>
-            <form style="text-align: left;">
-                <div class="form-group">
-                    <label>Official Email</label>
-                    <input type="email" id="admEmail" required placeholder="official@fixmyarea.com">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="admPassword" required placeholder="••••••••">
-                </div>
-                <button type="button" class="btn btn-primary btn-block" onclick="loginAdmin()"><i class="fa-solid fa-shield-halved"></i> Secure Login</button>
-                <div id="admError" style="color:red; font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Main App Container (Hidden until mapped/login) -->
-    <div id="appContainer" style="display: none;">
+    <!-- Main App Container (Visible by default) -->
+    <div id="appContainer" style="display: block;">
         <nav class="navbar">
-            <div class="logo">
-                <i class="fa-solid fa-map-location-dot"></i> FixMyArea
+            <div style="display:flex; align-items:center; gap:1.5rem;">
+                <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars"></i></button>
+                <div class="logo">
+                    <i class="fa-solid fa-map-location-dot"></i> FixMyArea
+                </div>
             </div>
             <div class="nav-links" style="display:none; gap:2rem;" id="desktopNavLinks">
-                <a href="index.html" style="text-decoration:none; color:var(--primary); font-weight:700;">Dashboard</a>
-                <a href="about.html" style="text-decoration:none; color:var(--text-main); font-weight:600; cursor:pointer;">About Us</a>
-                <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600; cursor:pointer;">Join Us</a>
+                <a href="index.html" style="text-decoration:none; color:var(--primary); font-weight:700;" data-i18n="dashboard">Dashboard</a>
+                <a href="about.html" style="text-decoration:none; color:var(--text-main); font-weight:600; cursor:pointer;" data-i18n="about">About Us</a>
+                <a href="settings.html" style="text-decoration:none; color:var(--text-main); font-weight:600; cursor:pointer;" data-auth="user" data-i18n="settings">Settings</a>
+                <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600; cursor:pointer;" data-i18n="connect">Join Us</a>
+                <a href="login.html" class="btn btn-outline" style="padding:0.4rem 1.2rem;" data-auth="guest">Sign In</a>
             </div>
             <div class="nav-actions">
-                <div id="userProfile" class="user-profile">
-                    <span id="profileName" class="profile-name"></span>
-                    <button id="btnLogout" class="btn btn-outline" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                <div id="userProfile" class="profile-dropdown-container">
+                    <button class="profile-avatar-btn" id="btnProfileToggle">
+                        <div class="avatar-circle" id="profileAvatarInitials" style="background:var(--border); color:var(--text-muted);"><i class="fa-solid fa-user"></i></div>
+                        <span id="profileName" class="profile-name" style="font-weight:600; color:var(--text-main);">Sign In</span>
+                        <i class="fa-solid fa-chevron-down" style="color:var(--text-muted); font-size:0.8rem; margin-left:0.25rem;"></i>
+                    </button>
+                    <div class="profile-menu">
+                        <div class="profile-header">
+                            <strong id="profileMenuRole">Welcome Guest</strong>
+                        </div>
+                        <div id="authMenuActions">
+                            <div class="dropdown-item" onclick="window.location.href='login.html'">
+                                <i class="fa-solid fa-door-open" style="color:var(--primary);"></i> <span style="font-weight:600; color:var(--text-main);" data-i18n="signIn">Sign In</span>
+                            </div>
+                            <div class="dropdown-item" onclick="window.location.href='register.html'">
+                                <i class="fa-solid fa-user-plus" style="color:var(--secondary);"></i> <span style="font-weight:600; color:var(--text-main);" data-i18n="register">Register Account</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button id="btnOpenReport" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Report Issue</button>
+                <button id="btnOpenReport" class="btn btn-primary" onclick="if(!currentUserUID){ window.location.href='login.html'; } else { window.location.href='report.html'; }" data-i18n="reportIssue"><i class="fa-solid fa-plus"></i> Report Issue</button>
             </div>
         </nav>
 
-        <header class="hero-section">
+        <header class="hero-section reveal">
             <div class="hero-content">
-                <h1>Report. Track. Verify.</h1>
-                <p>Empowering the citizens of Kozhikode to fix local areas transparently.</p>
-            </div>
-            
-            <div class="stats-panel">
-                <div class="stat-card">
-                    <h3 id="statTotal">0</h3>
-                    <p>Total Issues</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="statCommonCategory">-</h3>
-                    <p>Most Reported</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="statCritical">-</h3>
-                    <p>Most Critical</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="statRecent">-</h3>
-                    <p>Latest Activity</p>
+                <span class="badge" style="background: var(--primary); margin-bottom: 2rem; padding: 0.5rem 1.25rem;" data-i18n="heroBadge">✨ Kozhikode Civic Initiative</span>
+                <h1 data-i18n="heroTitle">Empowering Citizens.<br>Transforming Kozhikode.</h1>
+                <p data-i18n="heroSub">Report issues, track resolutions, and build a better community together through transparency and action.</p>
+                
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="if(!currentUserUID){ window.location.href='login.html'; } else { window.location.href='report.html'; }" data-i18n="reportIssue">
+                        <i class="fa-solid fa-plus"></i> Report an Issue
+                    </button>
+                    <button class="btn btn-outline" style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3);" onclick="document.getElementById('searchInput').focus()" data-i18n="trackProgress">
+                        <i class="fa-solid fa-magnifying-glass"></i> Track Progress
+                    </button>
                 </div>
             </div>
         </header>
 
-        <main class="dashboard">
+        <!-- Dynamic Stats Panel -->
+        <div class="stats-panel reveal">
+            <div class="stat-card">
+                <h3 id="statTotal">0</h3>
+                <p data-i18n="totalIssues">Total Issues</p>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--secondary);">
+                <h3 id="statCommonCategory">-</h3>
+                <p data-i18n="mostReported">Top Category</p>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--status-progress);">
+                <h3 id="statCritical">-</h3>
+                <p data-i18n="mostCritical">Critical Area</p>
+            </div>
+            <div class="stat-card" id="statRecentContainer">
+                <h3 id="statRecent">-</h3>
+                <p data-i18n="latestActivity">Latest Fix</p>
+            </div>
+        </div>
+            
+        <section style="max-width: 1100px; margin: 6rem auto; padding: 0 2rem;" class="reveal">
+            <div style="text-align: center; margin-bottom: 4rem;">
+                <h2 style="font-size: 2.5rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em;" data-i18n="howItWorks">How FixMyArea Works</h2>
+                <p style="color: var(--text-muted); font-size: 1.15rem; margin-top: 1rem;" data-i18n="howItWorksSub">Simple steps to a cleaner and better city.</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem;">
+                <div class="glass" style="padding: 3rem; border-radius: var(--radius-xl); text-align: center; transition: transform 0.3s ease;">
+                    <div style="width: 80px; height: 80px; background: var(--primary-light); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 2rem;">
+                        <i class="fa-solid fa-camera-retro"></i>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;" data-i18n="report">1. Report</h3>
+                    <p style="color: var(--text-muted);" data-i18n="step1Desc">Snap a photo and pin the location of any civic issue. It's fast, easy, and impactful.</p>
+                </div>
+                
+                <div class="glass" style="padding: 3rem; border-radius: var(--radius-xl); text-align: center; transition: transform 0.3s ease;">
+                    <div style="width: 80px; height: 80px; background: rgba(16, 185, 129, 0.1); color: var(--secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 2rem;">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;" data-i18n="track">2. Track</h3>
+                    <p style="color: var(--text-muted);" data-i18n="step2Desc">Monitor progress in real-time. Upvote critical issues to ensure they get the attention they deserve.</p>
+                </div>
+                
+                <div class="glass" style="padding: 3rem; border-radius: var(--radius-xl); text-align: center; transition: transform 0.3s ease;">
+                    <div style="width: 80px; height: 80px; background: rgba(99, 102, 241, 0.1); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 2rem;">
+                        <i class="fa-solid fa-check-double"></i>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;" data-i18n="resolve">3. Resolve</h3>
+                    <p style="color: var(--text-muted);" data-i18n="step3Desc">Verify the fix once completed. We close the loop together with the local authorities.</p>
+                </div>
+            </div>
+        </section>
+        </header>
+
+        <main class="dashboard" style="position:relative; z-index:10;">
+            <!-- Live News & Notifications Feed -->
+        <section class="latest-news-section reveal" style="max-width: var(--max-width); margin: 6rem auto 4rem; padding: 0 1.5rem;">
+            <div style="display:flex; justify-content: space-between; align-items:flex-end; margin-bottom: 2.5rem;">
+                <div>
+                    <h2 style="font-size: 2rem; color: var(--text-main); font-weight: 800; letter-spacing: -0.02em;" data-i18n="latestNews">Live Updates</h2>
+                    <p style="color: var(--text-muted); margin-top: 0.5rem;" data-i18n="liveUpdatesSub">Stay informed about local civic actions.</p>
+                </div>
+                <a href="noti.html" class="btn btn-outline" style="border-radius: 50px; padding: 0.5rem 1.25rem; font-size: 0.85rem;" data-i18n="viewFullFeed">
+                    View Feed <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+            
+            <div class="news-feed-wrapper" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                <!-- Notification 1 -->
+                <div class="notification-card glass" style="border-left: 6px solid var(--primary); padding: 1.75rem;">
+                    <div class="notification-content">
+                        <div class="notification-title">Scheduled Maintenance</div>
+                        <div class="notification-text">Water supply logic maintenance in Ward 15 this Sunday. Services might be offline for 3 hours.</div>
+                        <span class="notification-time"><i class="fa-regular fa-clock"></i> 2 hours ago</span>
+                    </div>
+                    <span class="notification-badge badge-alert" style="box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">Alert</span>
+                </div>
+
+                <!-- Notification 2 -->
+                <div class="notification-card glass" style="border-left: 6px solid var(--status-progress); padding: 1.75rem;">
+                    <div class="notification-content">
+                        <div class="notification-title">Status Updated to Progress</div>
+                        <div class="notification-text">The "Pothole near central library" issue has been acknowledged by the PWD and work has begun.</div>
+                        <span class="notification-time"><i class="fa-regular fa-clock"></i> 4 hours ago</span>
+                    </div>
+                    <span class="notification-badge badge-progress" style="box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">In Progress</span>
+                </div>
+
+                <!-- Notification 3 -->
+                <div class="notification-card glass" style="border-left: 6px solid var(--status-resolved); padding: 1.75rem;">
+                    <div class="notification-content">
+                        <div class="notification-title">Issue Officially Resolved</div>
+                        <div class="notification-text">Garbage clearance at the East End plot was completed. Thanks for reporting!</div>
+                        <span class="notification-time"><i class="fa-regular fa-clock"></i> 1 day ago</span>
+                    </div>
+                    <span class="notification-badge badge-resolved" style="box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">Resolved</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard View -->
             <!-- Interactive Map View -->
             <div class="map-container">
                 <div id="map"></div>
+                
+                <div class="map-legend">
+                    <div class="legend-item"><div class="legend-dot" style="background:#F59E0B;"></div> <span data-i18n="legendPending">Pending</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#3B82F6;"></div> <span data-i18n="legendInProgress">In Progress</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#8B5CF6;"></div> <span data-i18n="legendReview">Needs Review</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#10B981;"></div> <span data-i18n="legendResolved">Resolved</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#EF4444;"></div> <span data-i18n="legendReopened">Reopened</span></div>
+                </div>
+
+                <div class="map-controls-overlay">
+                    <button class="map-control-btn" onclick="locateMe()" title="Locate Me" data-i18n-title="locateMe">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                    </button>
+                    <button class="map-control-btn" onclick="resetMapView()" title="Reset View" data-i18n-title="resetView">
+                        <i class="fa-solid fa-house"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="filters">
                 <div class="search-box">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="search" id="searchInput" placeholder="Search issues, locations, descriptions...">
+                    <input type="search" id="searchInput" placeholder="Search issues, locations, descriptions..." data-i18n="searchPlaceholder">
                 </div>
                 
-                <div class="filter-group">
-                    <select id="categoryFilter">
-                        <option value="All">All Categories</option>
-                        <option value="Roads">🛣️ Roads & Potholes</option>
-                        <option value="Waste">🗑️ Public Waste</option>
-                        <option value="Drainage">💧 Drainage & Water</option>
-                        <option value="Utilities">💡 Public Utilities</option>
-                        <option value="Toilets">🚻 Public Toilets</option>
-                    </select>
+                <div class="filter-group custom-dropdown-container" id="dropdown-category">
+                    <button class="custom-dropdown-btn" type="button">
+                        <span class="dropdown-selected-text" data-i18n="allCategories">All Categories</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item selected" data-value="All" data-i18n="allCategories">All Categories</div>
+                        <div class="dropdown-item" data-value="Roads">🛣️ Roads & Potholes</div>
+                        <div class="dropdown-item" data-value="Waste">🗑️ Public Waste</div>
+                        <div class="dropdown-item" data-value="Drainage">💧 Drainage & Water</div>
+                        <div class="dropdown-item" data-value="Utilities">💡 Public Utilities</div>
+                        <div class="dropdown-item" data-value="Toilets">🚻 Public Toilets</div>
+                    </div>
+                    <input type="hidden" id="categoryFilter" value="All">
                 </div>
-                <div class="filter-group">
-                    <select id="statusFilter">
-                        <option value="All">All Statuses</option>
-                        <option value="Pending">🟡 Pending</option>
-                        <option value="In Progress">🔵 In Progress</option>
-                        <option value="Review">🟣 Needs Verification</option>
-                        <option value="Resolved">🟢 Resolved</option>
-                    </select>
+                <div class="filter-group custom-dropdown-container" id="dropdown-status">
+                    <button class="custom-dropdown-btn" type="button">
+                        <span class="dropdown-selected-text" data-i18n="allStatuses">All Statuses</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item selected" data-value="All" data-i18n="allStatuses">All Statuses</div>
+                        <div class="dropdown-item" data-value="Pending">🟡 Pending</div>
+                        <div class="dropdown-item" data-value="In Progress">🔵 In Progress</div>
+                        <div class="dropdown-item" data-value="Review">🟣 Needs Verification</div>
+                        <div class="dropdown-item" data-value="Resolved">🟢 Resolved</div>
+                    </div>
+                    <input type="hidden" id="statusFilter" value="All">
                 </div>
-                <div class="filter-group">
-                    <select id="sortFilter">
-                        <option value="priority">🔥 Highest Priority</option>
-                        <option value="recent">🕒 Most Recent</option>
-                    </select>
+                <div class="filter-group custom-dropdown-container" id="dropdown-sort">
+                    <button class="custom-dropdown-btn" type="button">
+                        <span class="dropdown-selected-text" data-i18n="highestPriority">🔥 Highest Priority</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item selected" data-value="priority" data-i18n="highestPriority">🔥 Highest Priority</div>
+                        <div class="dropdown-item" data-value="recent" data-i18n="mostRecent">🕒 Most Recent</div>
+                    </div>
+                    <input type="hidden" id="sortFilter" value="priority">
                 </div>
             </div>
             
@@ -218,41 +293,6 @@
                 <!-- Cards injected via JS -->
             </div>
         </main>
-    </div>
-
-    <!-- Report Modal -->
-    <div id="reportModal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="closeReport">&times;</span>
-            <h2>Report a New Issue in Kozhikode</h2>
-            <form id="reportForm">
-                <div class="form-group">
-                    <label>Upload 'Before' Image</label>
-                    <!-- Authentic File Upload -->
-                    <input type="file" id="issueFile" accept="image/png, image/jpeg, image/webp" required>
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="issueCategory" required>
-                        <option value="" disabled selected>Select a category</option>
-                        <option value="Roads">🛣️ Roads & Potholes</option>
-                        <option value="Waste">🗑️ Public Waste</option>
-                        <option value="Drainage">💧 Drainage & Water</option>
-                        <option value="Utilities">💡 Public Utilities</option>
-                        <option value="Toilets">🚻 Public Toilets</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Location / Address</label>
-                    <input type="text" id="issueLocation" placeholder="E.g. SM Street, near the arch" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="issueDescription" rows="4" placeholder="Describe the issue in detail..." required></textarea>
-                </div>
-                <button type="submit" id="btnReportSubmit" class="btn btn-primary btn-block"><i class="fa-solid fa-cloud-arrow-up"></i> Upload & Submit Report</button>
-            </form>
-        </div>
     </div>
 
     <!-- Admin Resolution Proof Modal -->

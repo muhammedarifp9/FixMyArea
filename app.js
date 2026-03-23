@@ -1,7 +1,6 @@
 /*************************************************
  * 1. FIREBASE CONFIGURATION
  *************************************************/
-// TODO: Replace this empty object with your project configuration from console.firebase.google.com
 const firebaseConfig = {
     apiKey: "AIzaSyBmCi3y9OwTsMNGLaiOSOTjX3L3wNqUJ0Y",
     authDomain: "fixmyarea10.firebaseapp.com",
@@ -12,7 +11,7 @@ const firebaseConfig = {
     measurementId: "G-C662JRQXY9"
 };
 
-// Initialize Firebase only if the user has provided the API Key
+// Initialize Firebase
 let app, auth, db, storage;
 if (firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
     app = firebase.initializeApp(firebaseConfig);
@@ -26,13 +25,117 @@ if (firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
  *************************************************/
 let currentRole = null;
 let currentUserUID = null;
-let dbIssues = []; // Realtime mirror of Firestore
+let dbIssues = [];
 let issueToResolve = null;
 let leafletMap = null;
 let currentMarkers = [];
 let mapInitialized = false;
 
-// Map helper icons
+const translations = {
+    en: {
+        dashboard: "Dashboard",
+        profile: "My Profile",
+        settings: "App Settings",
+        about: "About Us",
+        connect: "Join Volunteer",
+        signOut: "Sign Out",
+        reportIssue: "Report Issue",
+        trackProgress: "Track Progress",
+        howItWorks: "How FixMyArea Works",
+        report: "Report",
+        track: "Track & Verify",
+        resolve: "Resolve",
+        totalIssues: "Total Issues",
+        mostReported: "Most Reported",
+        mostCritical: "Most Critical",
+        latestActivity: "Latest Activity",
+        latestNews: "Live Updates & News",
+        viewFullFeed: "View Full Feed",
+        allCategories: "All Categories",
+        allStatuses: "All Statuses",
+        highestPriority: "Highest Priority",
+        mostRecent: "Most Recent",
+        welcomeGuest: "Welcome Guest",
+        signIn: "Sign In",
+        register: "Register Account",
+        searchPlaceholder: "Search issues, locations, descriptions...",
+        appearance: "Appearance",
+        theme: "Application Theme",
+        light: "Light Theme",
+        dark: "Dark Theme",
+        localization: "Localization",
+        language: "Language Preference",
+        save: "Save Preferences",
+        saved: "Preferences Saved Successfully!",
+        legendPending: "Pending",
+        legendInProgress: "In Progress",
+        legendReview: "Needs Review",
+        legendResolved: "Resolved",
+        legendReopened: "Reopened",
+        locateMe: "Locate Me",
+        resetView: "Reset View",
+        heroBadge: "✨ Kozhikode Civic Initiative",
+        heroTitle: "Empowering Citizens.<br>Transforming Kozhikode.",
+        heroSub: "Report issues, track resolutions, and build a better community together through transparency and action.",
+        howItWorksSub: "Simple steps to a cleaner and better city.",
+        step1Desc: "Snap a photo and pin the location of any civic issue. It's fast, easy, and impactful.",
+        step2Desc: "Monitor progress in real-time. Upvote critical issues to ensure they get the attention they deserve.",
+        step3Desc: "Verify the fix once completed. We close the loop together with the local authorities.",
+        liveUpdatesSub: "Stay informed about local civic actions."
+    },
+    ml: {
+        dashboard: "ഡാഷ്ബോർഡ്",
+        profile: "എന്റെ പ്രൊഫൈൽ",
+        settings: "ആപ്പ് ക്രമീകരണങ്ങൾ",
+        about: "ഞങ്ങളെക്കുറിച്ച്",
+        connect: "വളന്റിയറാകൂ",
+        signOut: "പുറത്തുകടക്കുക",
+        reportIssue: "പ്രശ്നം റിപ്പോർട്ട് ചെയ്യുക",
+        trackProgress: "പുരോഗതി ട്രാക്ക് ചെയ്യുക",
+        howItWorks: "ഫിക്സ് മൈ ഏരിയ എങ്ങനെ പ്രവർത്തിക്കുന്നു",
+        report: "1. റിപ്പോർട്ട്",
+        track: "2. ട്രാക്ക്",
+        resolve: "3. പരിഹാരം",
+        totalIssues: "ആകെ പരാതികൾ",
+        mostReported: "കൂടുതൽ റിപ്പോർട്ട് ചെയ്തത്",
+        mostCritical: "ഏറ്റവും പ്രധാനം",
+        latestActivity: "അവസാനത്തെ പ്രവർത്തനം",
+        latestNews: "തത്സമയ അപ്‌ഡേറ്റുകൾ",
+        viewFullFeed: "ഫീഡ് കാണുക",
+        allCategories: "എല്ലാ വിഭാഗങ്ങളും",
+        allStatuses: "എല്ലാ അവസ്ഥകളും",
+        highestPriority: "ഏറ്റവും പ്രധാനം",
+        mostRecent: "ഏറ്റവും പുതിയത്",
+        welcomeGuest: "സ്വാഗതം ഗസ്റ്റ്",
+        signIn: "ലോഗിൻ ചെയ്യുക",
+        register: "അക്കൗണ്ട് തുടങ്ങുക",
+        searchPlaceholder: "തിരയുക...",
+        appearance: "രൂപഭാവം",
+        theme: "ആപ്പ് തീം",
+        light: "ലൈറ്റ് തീം",
+        dark: "ഡാർക്ക് തീം",
+        localization: "ഭാഷ തിരഞ്ഞെടുക്കുക",
+        language: "ഭാഷ",
+        save: "സേവ് ചെയ്യുക",
+        saved: "വിജയകരമായി സേവ് ചെയ്തു!",
+        legendPending: "തീർച്ചപ്പെടുത്തിയിട്ടില്ല",
+        legendInProgress: "പുരോഗതിയിൽ",
+        legendReview: "പരിശോധനയിൽ",
+        legendResolved: "പരിഹരിച്ചു",
+        legendReopened: "വീണ്ടും തുറന്നു",
+        locateMe: "എന്റെ ലൊക്കേഷൻ",
+        resetView: "റീസെറ്റ് വ്യൂ",
+        heroBadge: "✨ കോഴിക്കോട് സിവിക് ഇനിഷ്യേറ്റീവ്",
+        heroTitle: "പൗരന്മാരെ ശാക്തീകരിക്കുന്നു.<br>കോഴിക്കോടിനെ മാറ്റുന്നു.",
+        heroSub: "പ്രശ്നങ്ങൾ റിപ്പോർട്ട് ചെയ്യുക, പരിഹാരങ്ങൾ ട്രാക്ക് ചെയ്യുക, സുതാര്യതയിലൂടെയും പ്രവർത്തനത്തിലൂടെയും മികച്ചൊരു സമൂഹം ഒരുമിച്ച് കെട്ടിപ്പടുക്കുക.",
+        howItWorksSub: "വൃത്തിയുള്ളതും മെച്ചപ്പെട്ടതുമായ നഗരത്തിലേക്കുള്ള ലളിതമായ ഘട്ടങ്ങൾ.",
+        step1Desc: "ഏതെങ്കിലും സിവിക് പ്രശ്നത്തിന്റെ ഫോട്ടോ എടുത്ത് ലൊക്കേഷൻ പിൻ ചെയ്യുക. ഇത് വേഗതയുള്ളതും എളുപ്പവുമാണ്.",
+        step2Desc: "തത്സമയം പുരോഗതി നിരീക്ഷിക്കുക. അവശ്യ പ്രശ്നങ്ങൾക്ക് അർഹമായ ശ്രദ്ധ ലഭിക്കുന്നുവെന്ന് ഉറപ്പാക്കാൻ അവ വോട്ട് ചെയ്യുക.",
+        step3Desc: "പൂർത്തിയായ പ്രശ്നങ്ങൾ പരിഹരിച്ചുവെന്ന് പരിശോധിക്കുക. പ്രാദേശിക അധികാരികളോടൊപ്പം ഞങ്ങൾ ഇത് പൂർത്തിയാക്കുന്നു.",
+        liveUpdatesSub: "പ്രാദേശിക സിവിക് പ്രവർത്തനങ്ങളെക്കുറിച്ച് അറിയുക."
+    }
+};
+
 const categoryIcons = {
     "Roads": "fa-road",
     "Waste": "fa-trash",
@@ -40,6 +143,30 @@ const categoryIcons = {
     "Utilities": "fa-lightbulb",
     "Toilets": "fa-restroom"
 };
+
+function applyLanguage(lang) {
+    const t = translations[lang] || translations.en;
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (t[key]) {
+            if (el.tagName === "INPUT" && (el.type === "search" || el.type === "text")) {
+                el.placeholder = t[key];
+            } else if (t[key].includes("<br>")) {
+                el.innerHTML = t[key];
+            } else {
+                el.innerText = t[key];
+            }
+        }
+    });
+}
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+}
 
 function timeAgo(dateString) {
     if (!dateString) return "Just now";
@@ -68,167 +195,184 @@ function getPriority(votes) {
  * 3. INITIALIZATION & LISTENERS
  *************************************************/
 document.addEventListener("DOMContentLoaded", () => {
-    if (!app) {
-        document.getElementById("firebaseWarning").style.display = "flex";
-        return;
-    }
+    if (!app) return;
 
-    // Standard DOM Listeners
     setupEventListeners();
 
-    // Listen to Firebase Auth State (Persists login across reloads)
+    // Init Theme and Language
+    const currentTheme = localStorage.getItem("fixmyarea_theme") || "light";
+    const currentLang = localStorage.getItem("fixmyarea_lang") || "en";
+    applyTheme(currentTheme);
+    applyLanguage(currentLang);
+
+    // Firebase Auth Listener
     auth.onAuthStateChanged(async user => {
         if (user) {
             try {
                 let doc = await db.collection("users").doc(user.uid).get();
                 let role = "citizen";
-                if (doc.exists && doc.data().role) {
-                    role = doc.data().role;
-                } else {
-                    role = (user.email === "admin@fixmyarea.com" || user.email.includes("admin")) ? "admin" : "citizen";
-                    try { await db.collection("users").doc(user.uid).set({ role }); } catch(err){}
+                let name = user.displayName || "Anonymous";
+                
+                if (doc.exists) {
+                    role = doc.data().role || "citizen";
+                    name = doc.data().name || name;
                 }
-                handleSuccessfulLogin(user, role);
+                
+                handleSuccessfulLogin(user, role, name);
             } catch(e) { 
-                console.error("Error fetching user role", e); 
-                handleSuccessfulLogin(user, "citizen"); // Fallback for hackathon
+                handleSuccessfulLogin(user, "citizen", "User");
             }
         } else {
-            if (typeof showAuthView === 'function') showAuthView('selection');
-            document.getElementById("loginOverlay").style.display = "flex";
-            document.getElementById("appContainer").style.display = "none";
+            handleLogoutUI();
         }
+    });
+
+    // Storage Event for Multi-tab Sync
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'fixmyarea_theme') applyTheme(e.newValue);
+        if (e.key === 'fixmyarea_lang') applyLanguage(e.newValue);
     });
 });
 
 function setupEventListeners() {
-    // Modals
-
-    // Modals
-    document.getElementById("btnOpenReport").addEventListener("click", () => showModal("reportModal"));
+    const reportBtn = document.getElementById("btnOpenReport");
+    if(reportBtn) reportBtn.addEventListener("click", () => {
+        if(!currentUserUID) window.location.href = 'login.html';
+        else showModal("reportModal");
+    });
+    
     document.querySelectorAll(".close").forEach(btn => {
         btn.addEventListener("click", (e) => hideModal(e.target.closest(".modal").id));
     });
 
-    // Filtering
-    document.getElementById("searchInput").addEventListener("input", renderIssues);
-    document.getElementById("categoryFilter").addEventListener("change", renderIssues);
-    document.getElementById("statusFilter").addEventListener("change", renderIssues);
-    document.getElementById("sortFilter").addEventListener("change", renderIssues);
+    const searchInput = document.getElementById("searchInput");
+    if(searchInput) searchInput.addEventListener("input", renderIssues);
 
-    // Form Submissions
-    document.getElementById("reportForm").addEventListener("submit", handleReportSubmit);
-    document.getElementById("adminForm").addEventListener("submit", handleAdminSubmit);
-}
+    // Dropdowns
+    document.querySelectorAll(".custom-dropdown-container").forEach(container => {
+        const btn = container.querySelector(".custom-dropdown-btn");
+        if(!btn) return;
+        const hiddenInput = container.querySelector("input[type='hidden']");
+        const selectedText = container.querySelector(".dropdown-selected-text");
+        
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.querySelectorAll(".custom-dropdown-container").forEach(c => {
+                if(c !== container) c.classList.remove("active");
+            });
+            container.classList.toggle("active");
+        });
+        
+        container.querySelectorAll(".dropdown-item").forEach(item => {
+            item.addEventListener("click", (e) => {
+                e.stopPropagation();
+                selectedText.innerText = item.innerText;
+                hiddenInput.value = item.getAttribute("data-value");
+                container.querySelectorAll(".dropdown-item").forEach(i => i.classList.remove("selected"));
+                item.classList.add("selected");
+                container.classList.remove("active");
+                renderIssues();
+            });
+        });
+    });
 
-/*************************************************
- * 4. AUTHENTICATION (Login / Logout)
- *************************************************/
-function showAuthView(viewName) {
-    document.getElementById("viewSelection").style.display = "none";
-    document.getElementById("viewCitizen").style.display = "none";
-    document.getElementById("viewAdmin").style.display = "none";
-    const vReg = document.getElementById("viewRegister");
-    if(vReg) vReg.style.display = "none";
+    const profileBtn = document.getElementById("btnProfileToggle");
+    if(profileBtn) {
+        profileBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.getElementById("userProfile").classList.toggle("active");
+        });
+    }
+
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".custom-dropdown-container, .profile-dropdown-container").forEach(c => c.classList.remove("active"));
+    });
+
+    const reportForm = document.getElementById("reportForm");
+    if(reportForm) reportForm.addEventListener("submit", handleReportSubmit);
     
-    if(viewName === 'citizen') document.getElementById("viewCitizen").style.display = "block";
-    else if(viewName === 'admin') document.getElementById("viewAdmin").style.display = "block";
-    else if(viewName === 'register') { if(vReg) vReg.style.display = "block"; }
-    else document.getElementById("viewSelection").style.display = "block";
+    const adminForm = document.getElementById("adminForm");
+    if(adminForm) adminForm.addEventListener("submit", handleAdminSubmit);
 }
 
-async function registerCitizen() {
-    const errorDiv = document.getElementById("regError");
-    errorDiv.style.display = "none";
-    const email = document.getElementById("regEmail").value.trim();
-    const password = document.getElementById("regPassword").value;
-    const name = document.getElementById("regName").value.trim();
-    const phone = document.getElementById("regPhone").value.trim();
-    const ward = document.getElementById("regWard").value.trim();
-    
-    if (!email || !password || !name || !ward) {
-        errorDiv.innerText = "Please fill in all required fields (Name, Ward, Email, Password).";
-        errorDiv.style.display = "block"; return;
-    }
-    try {
-        const { user } = await auth.createUserWithEmailAndPassword(email, password);
-        const role = (user.email.includes("admin")) ? "admin" : "citizen";
-        try { await db.collection("users").doc(user.uid).set({ role, name, phone, ward }); } catch(err) {} 
-    } catch (err) {
-        errorDiv.innerText = err.message;
-        errorDiv.style.display = "block";
-    }
-}
-
-async function loginCitizen() {
-    const errorDiv = document.getElementById("citError");
-    errorDiv.style.display = "none";
-    const email = document.getElementById("citEmail").value.trim();
-    const password = document.getElementById("citPassword").value;
-    if (!email || !password) {
-        errorDiv.innerText = "Please fill in both your email and password.";
-        errorDiv.style.display = "block"; return;
-    }
-    try {
-        await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) {
-        errorDiv.innerText = err.message;
-        errorDiv.style.display = "block";
-    }
-}
-
-async function loginAdmin() {
-    const errorDiv = document.getElementById("admError");
-    errorDiv.style.display = "none";
-    const email = document.getElementById("admEmail").value.trim();
-    const password = document.getElementById("admPassword").value;
-    if (!email || !password) {
-        errorDiv.innerText = "Please enter official credentials.";
-        errorDiv.style.display = "block"; return;
-    }
-    try {
-        await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) {
-        errorDiv.innerText = err.message;
-        errorDiv.style.display = "block";
-    }
-}
-
-function handleSuccessfulLogin(user, role) {
+function handleSuccessfulLogin(user, role, name) {
     currentUserUID = user.uid;
     currentRole = role;
 
-    document.getElementById("loginOverlay").style.display = "none";
-    document.getElementById("appContainer").style.display = "block";
+    // Update UI elements
+    const loginOverlay = document.getElementById("loginOverlay");
+    if(loginOverlay) loginOverlay.style.display = "none";
     
+    const appContainer = document.getElementById("appContainer");
+    if(appContainer) appContainer.style.display = "block";
+
     const navLinks = document.getElementById("desktopNavLinks");
     if(navLinks) navLinks.style.display = "flex";
 
-    document.getElementById("profileName").innerHTML = currentRole === "admin" ?
-        '<i class="fa-solid fa-shield-halved" style="color:var(--primary);"></i> Authority Portal' :
-        '<i class="fa-solid fa-user" style="color:var(--primary);"></i> Citizen Portal';
+    const profileNameEl = document.getElementById("profileName");
+    if(profileNameEl) profileNameEl.innerText = name;
+    
+    const navUserNameEl = document.getElementById("navUserName");
+    if(navUserNameEl) navUserNameEl.innerText = name;
 
-    document.getElementById("btnOpenReport").style.display = currentRole === "admin" ? "none" : "inline-flex";
+    const initialsEl = document.getElementById("profileAvatarInitials");
+    if(initialsEl) {
+        initialsEl.innerText = name.substring(0, 1).toUpperCase();
+        initialsEl.style.background = "var(--primary)";
+        initialsEl.style.color = "white";
+    }
+
+    const reportBtn = document.getElementById("btnOpenReport");
+    if(reportBtn) reportBtn.style.display = currentRole === "admin" ? "none" : "inline-flex";
 
     if (!mapInitialized) initMap();
-    else leafletMap.invalidateSize();
+    else if(leafletMap) leafletMap.invalidateSize();
 
-    // Start Realtime Firestore Listener
     listenToIssues();
 }
 
+function handleLogoutUI() {
+    currentUserUID = null;
+    currentRole = null;
+    
+    // Some pages might require redirect if not logged in
+    const restrictedPages = ['profile.html', 'settings.html', 'report.html'];
+    const currentPage = window.location.pathname.split('/').pop();
+    if(restrictedPages.includes(currentPage)) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // On index.html, just update UI
+    const navLinks = document.getElementById("desktopNavLinks");
+    if(navLinks) navLinks.style.display = "none";
+    
+    const initialsEl = document.getElementById("profileAvatarInitials");
+    if(initialsEl) initialsEl.innerHTML = '<i class="fa-solid fa-user"></i>';
+    
+    const profileNameEl = document.getElementById("profileName");
+    if(profileNameEl) profileNameEl.innerText = "Sign In";
+
+    if (!mapInitialized) initMap();
+    listenToIssues(); // Guest mode
+}
+
 function logout() {
-    auth.signOut();
+    auth.signOut().then(() => {
+        localStorage.removeItem("fixmyarea_user");
+        window.location.href = "index.html";
+    });
 }
 
 /*************************************************
- * 5. DATABASE OPERATIONS (Cloud Sync)
+ * 5. DATABASE OPERATIONS
  *************************************************/
 function listenToIssues() {
-    document.getElementById("loadingSpinner").style.display = "block";
+    const spinner = document.getElementById("loadingSpinner");
+    if(spinner) spinner.style.display = "block";
 
     db.collection("issues").onSnapshot((snapshot) => {
-        document.getElementById("loadingSpinner").style.display = "none";
+        if(spinner) spinner.style.display = "none";
         dbIssues = [];
         snapshot.forEach((doc) => {
             dbIssues.push({ id: doc.id, ...doc.data() });
@@ -239,33 +383,21 @@ function listenToIssues() {
 
 function upvoteIssue(id, event) {
     if (event) event.stopPropagation();
+    if (!currentUserUID) { window.location.href = 'login.html'; return; }
+    
     const issueRef = db.collection("issues").doc(id);
     db.runTransaction(async (transaction) => {
         const doc = await transaction.get(issueRef);
         if (doc.exists) {
-            transaction.update(issueRef, { votes: doc.data().votes + 1 });
+            transaction.update(issueRef, { votes: (doc.data().votes || 0) + 1 });
         }
-    }).catch(console.error);
-}
-
-function markInProgress(id) {
-    db.collection("issues").doc(id).update({ status: "In Progress" });
-}
-
-function verifyFix(id, isConfirmed) {
-    db.collection("issues").doc(id).update({
-        status: isConfirmed ? "Resolved" : "Reopened"
     });
-    hideModal("detailsModal");
 }
 
-/*************************************************
- * 6. CLOUD STORAGE (Actual File Uploads)
- *************************************************/
 async function handleReportSubmit(e) {
     e.preventDefault();
     const submitBtn = document.getElementById("btnReportSubmit");
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
     submitBtn.disabled = true;
 
     try {
@@ -279,34 +411,29 @@ async function handleReportSubmit(e) {
         const uploadTask = await fileRef.put(file);
         const imageUrl = await uploadTask.ref.getDownloadURL();
 
-        // Save metadata to Firestore
-        const lat = 11.25 + (Math.random() * 0.02); // Simulated mapping
+        const lat = 11.25 + (Math.random() * 0.02);
         const lng = 75.77 + (Math.random() * 0.02);
 
         await db.collection("issues").add({
             category, location, description,
-            beforeImg: imageUrl,
-            afterImg: null,
-            status: "Pending",
-            votes: 0,
+            beforeImg: imageUrl, afterImg: null,
+            status: "Pending", votes: 0,
             timestamp: new Date().toISOString(),
-            uid: currentUserUID,
-            lat, lng
+            uid: currentUserUID, lat, lng
         });
 
-        hideModal("reportModal");
-        e.target.reset();
+        if(window.location.pathname.includes('report.html')) {
+            window.location.href = 'index.html';
+        } else {
+            hideModal("reportModal");
+            e.target.reset();
+        }
     } catch (err) {
         alert("Upload Failed: " + err.message);
     } finally {
         submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload & Submit Report';
         submitBtn.disabled = false;
     }
-}
-
-function openAdminModal(id) {
-    issueToResolve = id;
-    showModal("adminModal");
 }
 
 async function handleAdminSubmit(e) {
@@ -337,16 +464,17 @@ async function handleAdminSubmit(e) {
 }
 
 /*************************************************
- * 7. RENDERING LOGIC (Updated to map dbIssues)
+ * 6. RENDERING LOGIC
  *************************************************/
 function renderIssues() {
-    if (!currentRole) return;
     const grid = document.getElementById("issuesGrid");
+    if(!grid) return;
     grid.innerHTML = "";
 
     let filtered = dbIssues;
 
-    const query = document.getElementById("searchInput").value.toLowerCase();
+    const queryEl = document.getElementById("searchInput");
+    const query = queryEl ? queryEl.value.toLowerCase() : "";
     if (query) {
         filtered = filtered.filter(i =>
             i.description.toLowerCase().includes(query) ||
@@ -355,21 +483,24 @@ function renderIssues() {
         );
     }
 
-    const cat = document.getElementById("categoryFilter").value;
+    const catFilter = document.getElementById("categoryFilter");
+    const cat = catFilter ? catFilter.value : "All";
     if (cat !== "All") filtered = filtered.filter(i => i.category === cat);
 
-    const stat = document.getElementById("statusFilter").value;
+    const statFilter = document.getElementById("statusFilter");
+    const stat = statFilter ? statFilter.value : "All";
     if (stat !== "All") filtered = filtered.filter(i => i.status === stat);
 
-    const sort = document.getElementById("sortFilter").value;
-    if (sort === "priority") filtered.sort((a, b) => b.votes - a.votes);
+    const sortFilter = document.getElementById("sortFilter");
+    const sort = sortFilter ? sortFilter.value : "priority";
+    if (sort === "priority") filtered.sort((a, b) => (b.votes || 0) - (a.votes || 0));
     else filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    const maxVotes = Math.max(...dbIssues.map(i => i.votes), 0);
+    const maxVotes = Math.max(...dbIssues.map(i => i.votes || 0), 0);
 
     filtered.forEach(issue => {
-        const priorityInfo = getPriority(issue.votes);
-        const isCritical = issue.votes === maxVotes && issue.votes > 0;
+        const priorityInfo = getPriority(issue.votes || 0);
+        const isCritical = (issue.votes || 0) === maxVotes && (issue.votes || 0) > 0;
         const card = document.createElement("div");
         card.className = `issue-card ${priorityInfo.level === 'High' ? 'priority-high' : ''}`;
 
@@ -398,7 +529,7 @@ function renderIssues() {
                 
                 <div class="card-footer">
                     <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event)">
-                        <i class="fa-solid fa-arrow-up"></i> ${issue.votes}
+                        <i class="fa-solid fa-arrow-up"></i> ${issue.votes || 0}
                     </button>
                     <button class="btn btn-outline" onclick="openDetails('${issue.id}')">View Details</button>
                 </div>
@@ -412,9 +543,11 @@ function renderIssues() {
 }
 
 /*************************************************
- * 8. MAP & UI LOGIC
+ * 7. MAP & MODAL UI
  *************************************************/
 function initMap() {
+    const mapEl = document.getElementById('map');
+    if(!mapEl || mapInitialized) return;
     leafletMap = L.map('map').setView([11.2588, 75.7804], 14);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
@@ -436,7 +569,6 @@ function updateMap(filteredList) {
 
             const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`;
             const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
-
             const marker = L.marker([issue.lat, issue.lng], { icon }).addTo(leafletMap);
             marker.on('click', () => openDetails(issue.id));
             currentMarkers.push(marker);
@@ -445,7 +577,9 @@ function updateMap(filteredList) {
 }
 
 function updateInsights() {
-    document.getElementById("statTotal").innerText = dbIssues.length;
+    const stEl = document.getElementById("statTotal");
+    if(stEl) stEl.innerText = dbIssues.length;
+    
     const catFreq = {};
     let maxCat = "-", maxCount = 0;
     dbIssues.forEach(i => {
@@ -455,18 +589,19 @@ function updateInsights() {
             maxCat = i.category;
         }
     });
-    document.getElementById("statCommonCategory").innerText = maxCat;
+    const stCatEl = document.getElementById("statCommonCategory");
+    if(stCatEl) stCatEl.innerText = maxCat;
 
-    const highestVoted = dbIssues.reduce((prev, current) => (prev.votes > current.votes) ? prev : current, { votes: -1 });
-    document.getElementById("statCritical").innerText = highestVoted.votes > -1 ? highestVoted.location.split(',')[0] : "-";
-    document.getElementById("statRecent").innerText = dbIssues.length > 0 ? timeAgo(dbIssues[Math.max(0, dbIssues.length - 1)].timestamp) : "-";
+    const highestVoted = dbIssues.reduce((prev, current) => ((prev.votes || 0) > (current.votes || 0)) ? prev : current, { votes: -1 });
+    const stCritEl = document.getElementById("statCritical");
+    if(stCritEl) stCritEl.innerText = highestVoted.votes > -1 ? (highestVoted.location || "-").split(',')[0] : "-";
 }
 
 function openDetails(id) {
     const issue = dbIssues.find(i => i.id === id);
     if (!issue) return;
 
-    const priorityInfo = getPriority(issue.votes);
+    const priorityInfo = getPriority(issue.votes || 0);
     let statusClass = "status-pending";
     if (issue.status === "In Progress") statusClass = "status-progress";
     if (issue.status === "Review") statusClass = "status-review";
@@ -474,18 +609,17 @@ function openDetails(id) {
     if (issue.status === "Reopened") statusClass = "status-reopened";
 
     let actionButtons = '';
-
     if (currentRole === "admin") {
         if (issue.status === "Pending" || issue.status === "Reopened") {
-            actionButtons = `<button class="btn btn-primary" onclick="markInProgress('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-hammer"></i> Pick Up Issue (In Progress)</button>`;
+            actionButtons = `<button class="btn btn-primary" onclick="markInProgress('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-hammer"></i> Pick Up Issue</button>`;
         } else if (issue.status === "In Progress") {
             actionButtons = `<button class="btn btn-success" onclick="openAdminModal('${issue.id}'); hideModal('detailsModal')"><i class="fa-solid fa-camera"></i> Provide Fix Proof</button>`;
         }
     } else {
         if (issue.status === "Review") {
             actionButtons = `
-                <button class="btn btn-danger" onclick="verifyFix('${issue.id}', false)"><i class="fa-solid fa-xmark"></i> Reject & Reopen</button>
-                <button class="btn btn-success" onclick="verifyFix('${issue.id}', true)"><i class="fa-solid fa-check"></i> Confirm Fixed</button>
+                <button class="btn btn-danger" onclick="verifyFix('${issue.id}', false)"><i class="fa-solid fa-xmark"></i> Reject</button>
+                <button class="btn btn-success" onclick="verifyFix('${issue.id}', true)"><i class="fa-solid fa-check"></i> Confirm Fix</button>
             `;
         }
     }
@@ -496,35 +630,126 @@ function openDetails(id) {
                 <h2>${issue.category} at ${issue.location}</h2>
                 <div class="details-badges">
                     <span class="badge ${statusClass}">${issue.status === "Review" ? "Needs Verification" : issue.status}</span>
-                    <span class="badge" style="background:#4F46E5;"><i class="fa-regular fa-clock"></i> Reported ${timeAgo(issue.timestamp)}</span>
-                    <span class="badge" style="background:transparent; border:1px solid #E2E8F0; color:#0F172A;"><i class="fa-solid fa-fire text-red-500"></i> ${priorityInfo.level} Priority</span>
+                    <span class="badge" style="background:#4F46E5;"><i class="fa-regular fa-clock"></i> ${timeAgo(issue.timestamp)}</span>
+                    <span class="badge" style="background:transparent; border:1px solid #E2E8F0; color:#0F172A;"><i class="fa-solid fa-fire" style="color:#EF4444;"></i> ${priorityInfo.level} Priority</span>
                 </div>
             </div>
             <button class="upvote-btn" onclick="upvoteIssue('${issue.id}', event); hideModal('detailsModal'); setTimeout(()=>openDetails('${issue.id}'),200)">
-                <i class="fa-solid fa-arrow-up"></i> ${issue.votes}
+                <i class="fa-solid fa-arrow-up"></i> ${issue.votes || 0}
             </button>
         </div>
-        
         <p style="font-size: 1.125rem; color: #475569; margin-bottom: 2rem;">${issue.description}</p>
-        
         <div class="media-comparison">
-            <div class="media-side">
-                <h4><i class="fa-solid fa-image"></i> Problem Reported</h4>
-                <img src="${issue.beforeImg}" alt="Before">
-            </div>
-            ${issue.afterImg ? `
-            <div class="media-side">
-                <h4><i class="fa-solid fa-image"></i> Resolution Proof</h4>
-                <img src="${issue.afterImg}" alt="After">
-            </div>
-            ` : ''}
+            <div class="media-side"><h4>Problem Reported</h4><img src="${issue.beforeImg}"></div>
+            ${issue.afterImg ? `<div class="media-side"><h4>Resolution Proof</h4><img src="${issue.afterImg}"></div>` : ''}
         </div>
-        
-        <div class="details-actions">
-            ${actionButtons || '<span style="color:#64748B; font-weight:500; font-size:0.875rem;">No actions available for your role at this stage.</span>'}
-        </div>
+        <div class="details-actions">${actionButtons || '<span style="color:#64748B;">No actions available.</span>'}</div>
     `;
-
     document.getElementById("detailsModalBody").innerHTML = html;
     showModal("detailsModal");
 }
+
+function showModal(id) { document.getElementById(id).style.display = "flex"; }
+function hideModal(id) { document.getElementById(id).style.display = "none"; }
+function markInProgress(id) { db.collection("issues").doc(id).update({ status: "In Progress" }); }
+function verifyFix(id, isConfirmed) { db.collection("issues").doc(id).update({ status: isConfirmed ? "Resolved" : "Reopened" }); hideModal("detailsModal"); }
+function openAdminModal(id) { issueToResolve = id; showModal("adminModal"); }
+
+/*************************************************
+ * 8. AUTHENTICATION (Login / Register)
+ *************************************************/
+async function loginUser(type) {
+    const errorDiv = document.getElementById(type === 'citizen' ? "citError" : "admError");
+    if(errorDiv) errorDiv.style.display = "none";
+    
+    const email = document.getElementById(type === 'citizen' ? "citEmail" : "admEmail").value.trim();
+    const password = document.getElementById(type === 'citizen' ? "citPassword" : "admPassword").value;
+    
+    if (!email || !password) {
+        if(errorDiv) { errorDiv.innerText = "Please fill in all credentials."; errorDiv.style.display = "block"; }
+        return;
+    }
+    
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        window.location.href = "index.html";
+    } catch (err) {
+        if(errorDiv) { errorDiv.innerText = err.message; errorDiv.style.display = "block"; }
+    }
+}
+
+async function registerUser(type) {
+    const errorDiv = document.getElementById(type === 'citizen' ? "citError" : "admError");
+    if(errorDiv) errorDiv.style.display = "none";
+    
+    let email, password, name, phone, ward;
+    
+    if (type === 'citizen') {
+        email = document.getElementById("regEmail").value.trim();
+        password = document.getElementById("regPassword").value;
+        name = document.getElementById("regName").value.trim();
+        phone = document.getElementById("regPhone").value.trim();
+        ward = document.getElementById("regWard").value.trim();
+    } else {
+        email = document.getElementById("admRegEmail").value.trim();
+        password = document.getElementById("admRegPassword").value;
+        name = document.getElementById("admRegName").value.trim();
+        phone = ""; 
+        ward = document.getElementById("admRegDept").value.trim(); // Mapping Dept to Ward for simplicity in users collection
+    }
+    
+    if (!email || !password || !name || !ward) {
+        if(errorDiv) { errorDiv.innerText = "Please fill in all required fields."; errorDiv.style.display = "block"; }
+        return;
+    }
+
+    try {
+        const { user } = await auth.createUserWithEmailAndPassword(email, password);
+        const role = type;
+        await db.collection("users").doc(user.uid).set({ role, name, phone, ward });
+        window.location.href = "index.html";
+    } catch (err) {
+        if(errorDiv) { errorDiv.innerText = err.message; errorDiv.style.display = "block"; }
+    }
+}
+
+async function saveProfile() {
+    if (!currentUserUID) return;
+    const name = document.getElementById("profName").value.trim();
+    const phone = document.getElementById("profPhone").value.trim();
+    const ward = document.getElementById("profWard").value.trim();
+    
+    try {
+        await db.collection("users").doc(currentUserUID).set({ name, phone, ward }, { merge: true });
+        const success = document.getElementById("profSuccess");
+        if(success) {
+            success.style.display = "block";
+            setTimeout(() => { success.style.display = "none"; }, 3000);
+        }
+        // Update local UI
+        const navUserNameEl = document.getElementById("navUserName");
+        if(navUserNameEl) navUserNameEl.innerText = name;
+        const profileNameEl = document.getElementById("profileName");
+        if(profileNameEl) profileNameEl.innerText = name;
+    } catch (err) {
+        alert("Failed to update profile: " + err.message);
+    }
+}
+
+function saveSettings() {
+    const theme = document.getElementById("themeSelect").value;
+    const lang = document.getElementById("langSelect").value;
+    
+    localStorage.setItem("fixmyarea_theme", theme);
+    localStorage.setItem("fixmyarea_lang", lang);
+    
+    applyTheme(theme);
+    applyLanguage(lang);
+    
+    const toast = document.getElementById("settingsToast");
+    if(toast) {
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
+    }
+}
+

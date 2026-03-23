@@ -4,48 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FixMyArea - About Us</title>
-    
+    <!-- Theme loading and common utils -->
+    <script src="common.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body style="background: var(--background);">
+<body>
 
-    <!-- Simple Navigation -->
-    <nav class="navbar" style="border-bottom: 1px solid var(--border);">
-        <a href="index.html" class="logo" style="text-decoration:none;">
-            <i class="fa-solid fa-map-location-dot"></i> FixMyArea
-        </a>
+    <!-- Slide Menu & Overlay -->
+    <div class="slide-menu-overlay" id="slideOverlay" onclick="document.getElementById('slideMenu').classList.remove('active'); this.classList.remove('active');"></div>
+    <aside class="slide-menu" id="slideMenu">
+        <button class="close-btn" onclick="document.getElementById('slideMenu').classList.remove('active'); document.getElementById('slideOverlay').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 0 2rem 2rem; border-bottom: 1px solid var(--border-light); margin-bottom: 1rem;">
+            <div class="logo" style="font-size: 1.25rem; color:var(--primary); font-weight:800;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</div>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin-top:0.5rem;">Kozhikode Civic Portal</p>
+        </div>
+        <a href="index.html" class="menu-item" data-i18n="dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="profile.html" class="menu-item" data-auth="user" data-i18n="profile"><i class="fa-solid fa-user-pen"></i> <span id="navUserName">My Profile</span></a>
+        <a href="settings.html" class="menu-item" data-auth="user" data-i18n="settings"><i class="fa-solid fa-gear"></i> App Settings</a>
+        <a href="noti.html" class="menu-item" data-auth="user" data-i18n="latestNews"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="about.html" class="menu-item" style="border-left-color: var(--primary); background: var(--primary-light); color: var(--primary);" data-i18n="about"><i class="fa-solid fa-circle-info"></i> About Us</a>
+        <a href="connect.html" class="menu-item" data-i18n="connect"><i class="fa-solid fa-handshake-angle"></i> Join Volunteer</a>
+        <a href="login.html" class="menu-item" data-auth="guest"><i class="fa-solid fa-right-to-bracket" style="color:var(--primary);"></i> <span style="color:var(--primary); font-weight:700;">Sign In</span></a>
+        <a href="#" class="menu-item" data-auth="user" onclick="logout()"><i class="fa-solid fa-right-from-bracket" style="color:var(--status-reopened);"></i> <span style="color:var(--status-reopened);" data-i18n="signOut">Sign Out</span></a>
+    </aside>
+
+    <nav class="navbar">
+        <div style="display:flex; align-items:center; gap:1.5rem;">
+            <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars"></i></button>
+            <a href="index.html" class="logo" style="text-decoration:none;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</a>
+        </div>
         <div class="nav-links" style="display:flex; gap:2rem;">
-            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Home</a>
+            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Dashboard</a>
             <a href="about.html" style="text-decoration:none; color:var(--primary); font-weight:700;">About Us</a>
-            <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Connect & Join</a>
+            <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Join Us</a>
+            <a href="login.html" class="btn btn-outline" style="padding:0.4rem 1.2rem; border-radius:var(--radius-md);" data-auth="guest">Sign In</a>
+        </div>
+        <div class="nav-actions" data-auth="user">
+            <!-- Simplified Profile dropdown -->
+            <button onclick="window.location.href='profile.html'" class="btn btn-outline" style="border:none; padding:0.5rem;" title="Go to Profile">
+                <i class="fa-solid fa-user-circle fa-2x" style="color:var(--text-muted);"></i>
+            </button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main style="max-width: 900px; margin: 4rem auto; padding: 2rem;">
-        
-        <div style="text-align:center; margin-bottom: 4rem;">
-            <h1 style="font-size:3rem; font-weight:800; color:var(--primary); margin-bottom:1rem;">Our Vision & Mission</h1>
-            <p style="font-size:1.25rem; color:var(--text-muted);">Empowering the citizens of Kozhikode to build a better, cleaner, and safer city through radical transparency.</p>
+    <!-- Hero Section -->
+    <header class="hero-section bg-garden reveal" style="padding: 6rem 5% 8rem;">
+        <div class="hero-content">
+            <span class="badge" style="background: var(--secondary); margin-bottom: 2rem; padding: 0.5rem 1.25rem;">Our Story</span>
+            <h1 style="font-size: 3.5rem; margin-bottom: 1.5rem;">Vision & Mission</h1>
+            <p style="max-width: 700px; margin: 0 auto; font-size: 1.25rem; opacity: 0.9;">Empowering the citizens of Kozhikode to build a better, cleaner, and safer city through radical transparency and collective action.</p>
         </div>
+    </header>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-bottom: 4rem;">
-            <div style="background:white; padding:2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
-                <h2><i class="fa-solid fa-eye" style="color:var(--primary);"></i> Our Vision</h2>
+    <!-- Main Content -->
+    <main style="max-width: 1100px; margin: -4rem auto 6rem; padding: 0 2rem; position: relative; z-index: 10;">
+        
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-bottom: 4rem;">
+            <div style="background:var(--surface); padding:2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
+                <h2 style="color:var(--text-main);"><i class="fa-solid fa-eye" style="color:var(--primary);"></i> Our Vision</h2>
                 <p style="color:var(--text-muted); line-height:1.6; margin-top:1rem;">To create a deeply connected civic framework where no public issue goes unnoticed. We envision a Kozhikode where citizens and authorities work hand-in-hand through trust and accountability to modernize our beautiful city.</p>
             </div>
             
-            <div style="background:white; padding:2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
-                <h2><i class="fa-solid fa-bullseye" style="color:var(--secondary);"></i> Our Mission</h2>
+            <div style="background:var(--surface); padding:2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
+                <h2 style="color:var(--text-main);"><i class="fa-solid fa-bullseye" style="color:var(--secondary);"></i> Our Mission</h2>
                 <p style="color:var(--text-muted); line-height:1.6; margin-top:1rem;">To provide an accessible, user-friendly digital platform that bridges the gap between public infrastructure failures and municipal response times. We demand proof of resolution, not just empty promises.</p>
             </div>
         </div>
 
         <div style="background:var(--primary); color:white; padding:3rem; border-radius:var(--radius-xl); text-align:center; box-shadow:var(--shadow-lg);">
             <h2 style="color:white; margin-bottom:1rem; font-size:2rem;">About FixMyArea</h2>
-            <p style="font-size:1.125rem; line-height:1.8; max-width:700px; margin:0 auto;">
+            <p style="font-size:1.125rem; line-height:1.8; max-width:700px; margin:0 auto; color:rgba(255,255,255,0.9);">
                 FixMyArea was born out of a simple frustration: seeing the same potholes, broken streetlights, and overflowing waste bins ignored for months. We built this platform for the people. By utilizing crowd-sourced reporting and a transparent verification system, we ensure that the most critical issues in Kozhikode are highlighted, prioritized, and eventually resolved with photographic proof.
             </p>
             <br>
@@ -54,5 +84,11 @@
 
     </main>
 
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script src="app.js"></script>
 </body>
 </html>

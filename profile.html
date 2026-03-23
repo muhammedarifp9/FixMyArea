@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixMyArea - User Profile</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Theme loading and common utils -->
+    <script src="common.js"></script>
+    <style>
+        .profile-container {
+            max-width: 800px; margin: 4rem auto; padding: 2rem;
+            background: var(--surface); border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg); border: 1px solid var(--border-light);
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .profile-header-sec {
+            display: flex; align-items: center; gap: 2rem; margin-bottom: 3rem;
+            padding-bottom: 2rem; border-bottom: 1px solid var(--border);
+        }
+        .huge-avatar {
+            width: 100px; height: 100px; border-radius: 50%;
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; font-weight: 800; box-shadow: var(--shadow-md);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide Menu & Overlay -->
+    <div class="slide-menu-overlay" id="slideOverlay" onclick="document.getElementById('slideMenu').classList.remove('active'); this.classList.remove('active');"></div>
+    <aside class="slide-menu" id="slideMenu">
+        <button class="close-btn" onclick="document.getElementById('slideMenu').classList.remove('active'); document.getElementById('slideOverlay').classList.remove('active');"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 0 2rem 2rem; border-bottom: 1px solid var(--border-light); margin-bottom: 1rem;">
+            <div class="logo" style="font-size: 1.25rem; color:var(--primary); font-weight:800;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</div>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin-top:0.5rem;">Kozhikode Civic Portal</p>
+        </div>
+        <a href="index.html" class="menu-item" data-i18n="dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="profile.html" class="menu-item" data-auth="user" style="border-left-color: var(--primary); background: var(--primary-light); color: var(--primary);" data-i18n="profile"><i class="fa-solid fa-user-pen"></i> <span id="navUserName">My Profile</span></a>
+        <a href="settings.html" class="menu-item" data-auth="user" data-i18n="settings"><i class="fa-solid fa-gear"></i> App Settings</a>
+        <a href="noti.html" class="menu-item" data-auth="user" data-i18n="latestNews"><i class="fa-solid fa-bell"></i> Notifications</a>
+        <a href="about.html" class="menu-item" data-i18n="about"><i class="fa-solid fa-circle-info"></i> About Us</a>
+        <a href="connect.html" class="menu-item" data-i18n="connect"><i class="fa-solid fa-handshake-angle"></i> Join Volunteer</a>
+        <a href="login.html" class="menu-item" data-auth="guest"><i class="fa-solid fa-right-to-bracket" style="color:var(--primary);"></i> <span style="color:var(--primary); font-weight:700;">Sign In</span></a>
+        <a href="#" class="menu-item" data-auth="user" onclick="logout()"><i class="fa-solid fa-right-from-bracket" style="color:var(--status-reopened);"></i> <span style="color:var(--status-reopened);" data-i18n="signOut">Sign Out</span></a>
+    </aside>
+
+    <nav class="navbar">
+        <div style="display:flex; align-items:center; gap:1.5rem;">
+            <button id="btnHamburger" class="hamburger-icon" onclick="document.getElementById('slideMenu').classList.add('active'); document.getElementById('slideOverlay').classList.add('active');"><i class="fa-solid fa-bars"></i></button>
+            <a href="index.html" class="logo" style="text-decoration:none;"><i class="fa-solid fa-map-location-dot"></i> FixMyArea</a>
+        </div>
+        <div class="nav-links" style="display:flex; gap:2rem;">
+            <a href="index.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Dashboard</a>
+            <a href="about.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">About Us</a>
+            <a href="settings.html" style="text-decoration:none; color:var(--text-main); font-weight:600;" data-auth="user">Settings</a>
+            <a href="connect.html" style="text-decoration:none; color:var(--text-main); font-weight:600;">Join Us</a>
+            <a href="login.html" class="btn btn-outline" style="padding:0.4rem 1.2rem; border-radius:var(--radius-md);" data-auth="guest">Sign In</a>
+        </div>
+        <div class="nav-actions" data-auth="user">
+            <button class="btn btn-outline" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+        </div>
+    </nav>
+
+    <main class="profile-container">
+        <div class="profile-header-sec">
+            <div class="profile-header-card">
+                <div class="huge-avatar" id="hugeAvatar"><i class="fa-solid fa-user"></i></div>
+                <div>
+                    <h1 style="font-size: 2.5rem; color: var(--text-main); margin-bottom: 0.5rem;" id="displayTitleName">Loading...</h1>
+                    <span class="priority-tag Medium" id="displayRoleBadge" style="font-size:1rem; padding: 0.25rem 0.75rem;">Account</span>
+                </div>
+            </div>
+        </div>
+
+        <form id="profileForm" style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Full Name</label>
+                <input type="text" id="profName" required>
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="profEmail" readonly style="background:var(--border-light); cursor:not-allowed;" title="Email cannot be changed">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="profPhone">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Kozhikode Ward / Local Area</label>
+                <input type="text" id="profWard">
+            </div>
+            <div style="grid-column: span 2; display:flex; justify-content:flex-end; margin-top:1rem; gap:1rem;">
+                <a href="index.html" class="btn btn-outline" style="padding: 0.85rem 2rem;">Cancel</a>
+                <button type="button" class="btn btn-primary" onclick="saveProfile()" style="padding: 0.85rem 2rem;"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+            </div>
+        </form>
+        <div id="profSuccess" style="color:var(--status-resolved); font-weight:600; text-align:center; display:none; margin-top:2rem;"><i class="fa-solid fa-circle-check"></i> Profile updated successfully!</div>
+    </main>
+
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script src="app.js"></script>
+    <script>
+        // Profile-specific initialization
+        document.addEventListener("DOMContentLoaded", () => {
+            // The actual data fetching is handled via auth.onAuthStateChanged in app.js
+            // We just need to wait for it or trigger a specific update here
+            const checkAuth = setInterval(async () => {
+                if (currentUserUID && auth.currentUser) {
+                    clearInterval(checkAuth);
+                    const user = auth.currentUser;
+                    const doc = await db.collection("users").doc(user.uid).get();
+                    const data = doc.exists ? doc.data() : {};
+                    
+                    document.getElementById("hugeAvatar").innerText = data.role === 'admin' ? 'A' : (data.name ? data.name.charAt(0).toUpperCase() : 'C');
+                    document.getElementById("displayTitleName").innerText = data.name || "Citizen User";
+                    document.getElementById("displayRoleBadge").innerText = data.role === 'admin' ? "★ Authority Account" : "Citizen Account";
+                    
+                    document.getElementById("profName").value = data.name || "";
+                    document.getElementById("profEmail").value = user.email || "";
+                    document.getElementById("profPhone").value = data.phone || "";
+                    document.getElementById("profWard").value = data.ward || "";
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

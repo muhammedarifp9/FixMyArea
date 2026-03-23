@@ -1,0 +1,75 @@
+/**
+ * FixMyArea - Common Utilities & Navigation
+ */
+
+// 1. Instant Theme Loader (to be called manually if not using inline script)
+function loadTheme() {
+    const theme = localStorage.getItem('fixmyarea_theme');
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+}
+
+// 2. Navigation & Auth UI
+function initNavigation() {
+    const user = JSON.parse(localStorage.getItem('fixmyarea_user'));
+    const isLogined = !!user;
+
+    // Toggle items based on data-auth attribute
+    document.querySelectorAll('[data-auth]').forEach(el => {
+        const requirement = el.getAttribute('data-auth');
+        if (requirement === 'user') {
+            el.style.display = isLogined ? 'flex' : 'none';
+        } else if (requirement === 'guest') {
+            el.style.display = isLogined ? 'none' : 'flex';
+        }
+    });
+
+    // Update profile-specific elements if they exist
+    const navName = document.getElementById('navUserName');
+    if (navName && user) {
+        navName.innerText = user.name || (user.role === 'admin' ? 'Authority' : 'Citizen');
+    }
+}
+
+// 3. Global Logout
+function logout() {
+    localStorage.removeItem('fixmyarea_user');
+    window.location.href = 'index.html';
+}
+
+// 4. Reveal Animations
+function initScrollReveal() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                revealObserver.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.reveal').forEach(el => {
+        revealObserver.observe(el);
+    });
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    loadTheme();
+    initNavigation();
+    initScrollReveal();
+
+    // Listen for storage changes (for multi-tab sync)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'fixmyarea_theme') loadTheme();
+        if (e.key === 'fixmyarea_user') initNavigation();
+    });
+});
