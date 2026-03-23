@@ -1,23 +1,24 @@
 :root {
-    --primary: #4F46E5;
-    --primary-hover: #4338CA;
-    --primary-light: #EEF2FF;
-    --secondary: #059669;
-    --secondary-hover: #047857;
+    --primary: #1E3A8A;
+    --primary-hover: #1e40af;
+    --primary-light: #EFF6FF;
+    --secondary: #3B82F6;
+    --secondary-hover: #2563eb;
+    --accent: #10B981;
     
-    --background: #F8FAFC;
+    --background: #F9FAFB;
     --surface: #FFFFFF;
     
-    --text-main: #0F172A;
-    --text-muted: #64748B;
-    --text-lighter: #94A3B8;
-    --border: #E2E8F0;
-    --border-light: #F1F5F9;
+    --text-main: #111827;
+    --text-muted: #6B7280;
+    --text-lighter: #9CA3AF;
+    --border: #E5E7EB;
+    --border-light: #F3F4F6;
     
-    --status-pending: #F59E0B;
-    --status-progress: #3B82F6;
-    --status-review: #8B5CF6;
-    --status-resolved: #10B981;
+    --status-pending: #EF4444;
+    --status-progress: #F59E0B;
+    --status-review: #3B82F6;
+    --status-resolved: #22C55E;
     --status-reopened: #EF4444;
 
     --radius-xl: 20px;
