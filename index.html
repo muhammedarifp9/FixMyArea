@@ -32,22 +32,59 @@
 
     <!-- Login Overlay -->
     <div id="loginOverlay" class="login-overlay">
-        <div class="login-card">
+        <!-- View 1: Selection -->
+        <div class="login-card" id="viewSelection">
             <div class="login-logo"><i class="fa-solid fa-map-location-dot"></i> FixMyArea Kozhikode</div>
-            <p class="login-subtitle">Secure Login Portal</p>
-            
-            <form id="authForm" style="text-align: left;">
+            <p class="login-subtitle">Please select your portal to continue.</p>
+            <div class="login-options">
+                <button class="login-btn citizen-btn" onclick="showAuthView('citizen')">
+                    <i class="fa-solid fa-users fa-2x"></i>
+                    <span>Citizen Portal</span>
+                    <small>Report issues and verify fixes</small>
+                </button>
+                <button class="login-btn admin-btn" onclick="showAuthView('admin')">
+                    <i class="fa-solid fa-building-shield fa-2x"></i>
+                    <span>Authority Portal</span>
+                    <small>Manage and resolve issues</small>
+                </button>
+            </div>
+        </div>
+        
+        <!-- View 2: Citizen -->
+        <div class="login-card" id="viewCitizen" style="display:none;">
+            <button class="btn btn-outline btn-sm" onclick="showAuthView('selection')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <div class="login-logo"><i class="fa-solid fa-users"></i> Citizen Portal</div>
+            <form style="text-align: left;">
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="authEmail" required placeholder="name@example.com">
+                    <input type="email" id="citEmail" required placeholder="citizen@example.com">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="authPassword" required placeholder="••••••••">
+                    <input type="password" id="citPassword" required placeholder="••••••••">
                 </div>
-                <!-- By default, Firebase creates typical accounts. We will assume Authority accounts are manually created in the DB, but users can register here. -->
-                <button type="submit" class="btn btn-primary btn-block" style="margin-bottom: 1rem;"><i class="fa-solid fa-right-to-bracket"></i> Login / Register</button>
-                <div id="authError" style="color:red; font-size:0.875rem; text-align:center; display:none;"></div>
+                <button type="button" class="btn btn-primary btn-block" onclick="loginCitizen()" style="margin-bottom:0.5rem;"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+                <button type="button" class="btn btn-outline btn-block" onclick="registerCitizen()"><i class="fa-solid fa-user-plus"></i> Register New Account</button>
+                <div id="citError" style="color:red; font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
+            </form>
+        </div>
+
+        <!-- View 3: Authority -->
+        <div class="login-card" id="viewAdmin" style="display:none;">
+            <button class="btn btn-outline btn-sm" onclick="showAuthView('selection')" style="margin-bottom:1rem; border:none; width:fit-content;"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <div class="login-logo"><i class="fa-solid fa-building-shield"></i> Authority Portal</div>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:1rem;">Secure access for Kozhikode city officials.</p>
+            <form style="text-align: left;">
+                <div class="form-group">
+                    <label>Official Email</label>
+                    <input type="email" id="admEmail" required placeholder="official@fixmyarea.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="admPassword" required placeholder="••••••••">
+                </div>
+                <button type="button" class="btn btn-primary btn-block" onclick="loginAdmin()"><i class="fa-solid fa-shield-halved"></i> Secure Login</button>
+                <div id="admError" style="color:red; font-size:0.875rem; text-align:center; display:none; margin-top:0.5rem;"></div>
             </form>
         </div>
     </div>

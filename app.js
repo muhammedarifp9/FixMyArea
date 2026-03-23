@@ -77,10 +77,21 @@ document.addEventListener("DOMContentLoaded", () => {
     setupEventListeners();
 
     // Listen to Firebase Auth State (Persists login across reloads)
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async user => {
         if (user) {
-            handleSuccessfulLogin(user);
+            try {
+                let doc = await db.collection("users").doc(user.uid).get();
+                let role = "citizen";
+                if (doc.exists && doc.data().role) {
+                    role = doc.data().role;
+                } else {
+                    role = (user.email === "admin@fixmyarea.com" || user.email.includes("admin")) ? "admin" : "citizen";
+                    await db.collection("users").doc(user.uid).set({ role });
+                }
+                handleSuccessfulLogin(user, role);
+            } catch(e) { console.error("Error fetching user role", e); }
         } else {
+            if (typeof showAuthView === 'function') showAuthView('selection');
             document.getElementById("loginOverlay").style.display = "flex";
             document.getElementById("appContainer").style.display = "none";
         }
@@ -88,8 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function setupEventListeners() {
-    // Auth
-    document.getElementById("authForm").addEventListener("submit", handleAuthSubmit);
+    // Modals
 
     // Modals
     document.getElementById("btnOpenReport").addEventListener("click", () => showModal("reportModal"));
@@ -111,34 +121,64 @@ function setupEventListeners() {
 /*************************************************
  * 4. AUTHENTICATION (Login / Logout)
  *************************************************/
-async function handleAuthSubmit(e) {
-    e.preventDefault();
-    const email = document.getElementById("authEmail").value;
-    const password = document.getElementById("authPassword").value;
-    const errorDiv = document.getElementById("authError");
+function showAuthView(viewName) {
+    document.getElementById("viewSelection").style.display = "none";
+    document.getElementById("viewCitizen").style.display = "none";
+    document.getElementById("viewAdmin").style.display = "none";
+    
+    if(viewName === 'citizen') document.getElementById("viewCitizen").style.display = "block";
+    else if(viewName === 'admin') document.getElementById("viewAdmin").style.display = "block";
+    else document.getElementById("viewSelection").style.display = "block";
+}
 
+async function registerCitizen() {
+    const errorDiv = document.getElementById("citError");
     errorDiv.style.display = "none";
     try {
-        // Attempt to log in. If account doesn't exist, create it.
-        try {
-            await auth.signInWithEmailAndPassword(email, password);
-        } catch (signInErr) {
-            if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
-                await auth.createUserWithEmailAndPassword(email, password);
-            } else {
-                throw signInErr;
-            }
-        }
+        const { user } = await auth.createUserWithEmailAndPassword(
+            document.getElementById("citEmail").value.trim(), 
+            document.getElementById("citPassword").value
+        );
+        const role = (user.email.includes("admin")) ? "admin" : "citizen";
+        await db.collection("users").doc(user.uid).set({ role });
     } catch (err) {
         errorDiv.innerText = err.message;
         errorDiv.style.display = "block";
     }
 }
 
-function handleSuccessfulLogin(user) {
+async function loginCitizen() {
+    const errorDiv = document.getElementById("citError");
+    errorDiv.style.display = "none";
+    try {
+        await auth.signInWithEmailAndPassword(
+            document.getElementById("citEmail").value.trim(), 
+            document.getElementById("citPassword").value
+        );
+    } catch (err) {
+        errorDiv.innerText = err.message;
+        errorDiv.style.display = "block";
+    }
+}
+
+async function loginAdmin() {
+    const errorDiv = document.getElementById("admError");
+    errorDiv.style.display = "none";
+    try {
+        await auth.signInWithEmailAndPassword(
+            document.getElementById("admEmail").value.trim(), 
+            document.getElementById("admPassword").value
+        );
+        // We will trust the onAuthStateChanged to verify they are actually an admin.
+    } catch (err) {
+        errorDiv.innerText = err.message;
+        errorDiv.style.display = "block";
+    }
+}
+
+function handleSuccessfulLogin(user, role) {
     currentUserUID = user.uid;
-    // For the hackathon, hardcode anyone with 'admin@fixmyarea.com' as an authority. All others are citizens.
-    currentRole = (user.email === "admin@fixmyarea.com" || user.email.includes("admin")) ? "admin" : "citizen";
+    currentRole = role;
 
     document.getElementById("loginOverlay").style.display = "none";
     document.getElementById("appContainer").style.display = "block";
