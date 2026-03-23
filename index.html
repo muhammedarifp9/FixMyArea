@@ -3,158 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FixMyArea - Report. Track. Verify.</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>FixMyArea - Kozhikode</title>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet mapping library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="logo">
-            <i class="fa-solid fa-map-location-dot"></i> FixMyArea
-        </div>
-        <div class="nav-actions">
-            <div class="role-toggle">
-                <span id="roleLabel">Citizen View</span>
-                <label class="switch">
-                    <input type="checkbox" id="roleToggle">
-                    <span class="slider round"></span>
-                </label>
-                <span>Admin View</span>
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-logo"><i class="fa-solid fa-map-location-dot"></i> FixMyArea Kozhikode</div>
+            <p class="login-subtitle">Please select your portal to continue.</p>
+            
+            <div class="login-options">
+                <button class="login-btn citizen-btn" onclick="loginAs('citizen')">
+                    <i class="fa-solid fa-users fa-2x"></i>
+                    <span>Citizen Portal</span>
+                    <small>Report issues and verify fixes</small>
+                </button>
+                <button class="login-btn admin-btn" onclick="loginAs('admin')">
+                    <i class="fa-solid fa-building-shield fa-2x"></i>
+                    <span>Authority Portal</span>
+                    <small>Manage and resolve issues</small>
+                </button>
             </div>
-            <button id="btnOpenReport" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Report Issue</button>
         </div>
-    </nav>
+    </div>
 
-    <header class="hero-section">
-        <div class="hero-content">
-            <h1>Empowering citizens to fix their local areas</h1>
-            <p>Report issues, track progress, and verify resolutions transparently.</p>
-        </div>
-        
-        <div class="stats-panel">
-            <div class="stat-card">
-                <h3 id="statTotal">0</h3>
-                <p>Total Issues</p>
+    <!-- Main App Container (Hidden until mapped/login) -->
+    <div id="appContainer" style="display: none;">
+        <nav class="navbar">
+            <div class="logo">
+                <i class="fa-solid fa-map-location-dot"></i> FixMyArea
             </div>
-            <div class="stat-card">
-                <h3 id="statPending">0</h3>
-                <p>Pending Review</p>
+            <div class="nav-actions">
+                <div id="userProfile" class="user-profile">
+                    <span id="profileName" class="profile-name"></span>
+                    <button id="btnLogout" class="btn btn-outline" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                </div>
+                <button id="btnOpenReport" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Report Issue</button>
             </div>
-            <div class="stat-card">
-                <h3 id="statResolved">0</h3>
-                <p>Successfully Verified</p>
-            </div>
-        </div>
-    </header>
+        </nav>
 
-    <main class="dashboard">
-        <div class="filters">
-            <div class="filter-group">
-                <label for="categoryFilter">Category:</label>
-                <select id="categoryFilter">
-                    <option value="All">All Categories</option>
-                    <option value="Roads">Roads & Potholes</option>
-                    <option value="Waste">Public Waste</option>
-                    <option value="Drainage">Drainage & Water</option>
-                    <option value="Utilities">Public Utilities</option>
-                </select>
+        <header class="hero-section">
+            <div class="hero-content">
+                <h1>Report. Track. Verify.</h1>
+                <p>Empowering the citizens of Kozhikode to fix local areas transparently.</p>
             </div>
-            <div class="filter-group">
-                <label for="statusFilter">Status:</label>
-                <select id="statusFilter">
-                    <option value="All">All Statuses</option>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Review">Needs Verification</option>
-                    <option value="Resolved">Resolved</option>
-                </select>
+            
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <h3 id="statTotal">0</h3>
+                    <p>Total Issues</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="statCommonCategory">-</h3>
+                    <p>Most Reported</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="statCritical">-</h3>
+                    <p>Most Critical</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="statRecent">-</h3>
+                    <p>Latest Activity</p>
+                </div>
             </div>
-            <div class="filter-group">
-                <label for="sortFilter">Sort By:</label>
-                <select id="sortFilter">
-                    <option value="recent">Most Recent</option>
-                    <option value="priority">Highest Priority</option>
-                </select>
-            </div>
-        </div>
+        </header>
 
-        <div id="issuesGrid" class="issues-grid">
-            <!-- Cards will be dynamically injected here -->
-        </div>
-    </main>
+        <main class="dashboard">
+            <!-- Interactive Map View -->
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+
+            <div class="filters">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="search" id="searchInput" placeholder="Search issues, locations, descriptions...">
+                </div>
+                
+                <div class="filter-group">
+                    <select id="categoryFilter">
+                        <option value="All">All Categories</option>
+                        <option value="Roads">🛣️ Roads & Potholes</option>
+                        <option value="Waste">🗑️ Public Waste</option>
+                        <option value="Drainage">💧 Drainage & Water</option>
+                        <option value="Utilities">💡 Public Utilities</option>
+                        <option value="Toilets">🚻 Public Toilets</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select id="statusFilter">
+                        <option value="All">All Statuses</option>
+                        <option value="Pending">🟡 Pending</option>
+                        <option value="In Progress">🔵 In Progress</option>
+                        <option value="Review">🟣 Needs Verification</option>
+                        <option value="Resolved">🟢 Resolved</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select id="sortFilter">
+                        <option value="priority">🔥 Highest Priority</option>
+                        <option value="recent">🕒 Most Recent</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="spinner-container" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading real-time data...</p>
+            </div>
+
+            <div id="issuesGrid" class="issues-grid">
+                <!-- Cards injected via JS -->
+            </div>
+        </main>
+    </div>
 
     <!-- Report Modal -->
     <div id="reportModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeReport">&times;</span>
-            <h2>Report a New Issue</h2>
+            <h2>Report a New Issue in Kozhikode</h2>
             <form id="reportForm">
                 <div class="form-group">
                     <label>Category</label>
                     <select id="issueCategory" required>
                         <option value="" disabled selected>Select a category</option>
-                        <option value="Roads">Roads & Potholes</option>
-                        <option value="Waste">Public Waste</option>
-                        <option value="Drainage">Drainage & Water</option>
-                        <option value="Utilities">Public Utilities</option>
+                        <option value="Roads">🛣️ Roads & Potholes</option>
+                        <option value="Waste">🗑️ Public Waste</option>
+                        <option value="Drainage">💧 Drainage & Water</option>
+                        <option value="Utilities">💡 Public Utilities</option>
+                        <option value="Toilets">🚻 Public Toilets</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Location / Address</label>
-                    <input type="text" id="issueLocation" placeholder="E.g. Main Street, near Central Park" required>
+                    <input type="text" id="issueLocation" placeholder="E.g. SM Street, near the arch" required>
                 </div>
                 <div class="form-group">
                     <label>Description</label>
                     <textarea id="issueDescription" rows="4" placeholder="Describe the issue in detail..." required></textarea>
                 </div>
-                <div class="form-group">
-                    <label>Upload 'Before' Image URL (Simulated Upload)</label>
-                    <input type="url" id="issueImage" placeholder="https://example.com/pothole.jpg" required value="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400">
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
+                <!-- Hackathon simplification: We auto-assign a random image based on category in JS -->
+                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-paper-plane"></i> Submit Report</button>
             </form>
         </div>
     </div>
 
-    <!-- Admin Resolution Modal -->
+    <!-- Admin Resolution Proof Modal -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeAdmin">&times;</span>
             <h2>Submit Resolution Proof</h2>
-            <p>Upload a photo proving the issue has been fixed to send it for public verification.</p>
+            <p>Upload a photo proving the issue has been fixed.</p>
             <form id="adminForm">
-                <input type="hidden" id="adminIssueId">
-                <div class="form-group">
-                    <label>Upload 'After' Image URL (Simulated Upload)</label>
-                    <input type="url" id="adminAfterImage" placeholder="https://example.com/fixed_road.jpg" required value="https://images.unsplash.com/photo-1584812301548-7323861fb16e?auto=format&fit=crop&q=80&w=400">
-                </div>
-                <button type="submit" class="btn btn-success btn-block">Submit for Verification</button>
+                <button type="submit" class="btn btn-success btn-block"><i class="fa-solid fa-upload"></i> Submit for Community Verification</button>
             </form>
         </div>
     </div>
 
-    <!-- Public Verification Modal -->
-    <div id="verifyModal" class="modal">
-        <div class="modal-content verify-content">
-            <span class="close" id="closeVerify">&times;</span>
-            <h2>Community Verification</h2>
-            <p>Please review the before and after images to ensure the issue is completely resolved.</p>
-            
-            <div class="comparison-container">
-                <div class="comparison-side">
-                    <h4>Before</h4>
-                    <img id="verifyBeforeImg" src="" alt="Before">
-                </div>
-                <div class="comparison-side">
-                    <h4>After (Proof)</h4>
-                    <img id="verifyAfterImg" src="" alt="After">
-                </div>
-            </div>
-            
-            <div class="verification-actions">
-                <button id="btnRejectFix" class="btn btn-danger"><i class="fa-solid fa-xmark"></i> Reject & Reopen</button>
-                <button id="btnConfirmFix" class="btn btn-success"><i class="fa-solid fa-check"></i> Confirm Fixed</button>
+    <!-- Issue Details & Verification Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content details-content">
+            <span class="close" id="closeDetails">&times;</span>
+            <div id="detailsModalBody">
+                <!-- Content injected via JS -->
             </div>
         </div>
     </div>
